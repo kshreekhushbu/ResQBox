@@ -1,0 +1,16 @@
+# Ignore env file
+.env
+
+# Ignore folders
+.agent/
+.gemini/
+docs/
+
+# Node modules (IMPORTANT)
+node_modules/
+
+# Logs
+logs/
+
+# Optional
+.vscode/

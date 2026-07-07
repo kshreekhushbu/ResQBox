@@ -1,0 +1,981 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUsers {
+  adminId    Int      @id @default(autoincrement())
+  name       String
+  emailId    String   @db.VarChar(75)
+  password   String
+  roleId     Int
+  token      String
+  status     Int      @default(1)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  otp        String?
+  otpStatus  Int?
+
+  @@map("admin_users")
+}
+
+model AdminRoles {
+  id          Int      @id @default(autoincrement())
+  role        String   @unique @db.VarChar(50)
+  created_at  DateTime @default(now())
+  permissions Json?
+
+  @@map("admin_roles")
+}
+
+model Banner {
+  bannerId  Int       @id @default(autoincrement())
+  banner    String? // banner image 
+  isActive  Int       @default(1) // 1=active, 2=soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  linkUrl   String? // optional link URL
+  linkType  LinkType? // optional link type (e.g., internal, external)
+
+  @@map("banners")
+}
+
+enum LinkType {
+  INTERNAL
+  EXTERNAL
+}
+
+model User {
+  userId         Int     @id @default(autoincrement())
+  phoneNumber    String?
+  name           String?
+  lastName       String?
+  email          String? @unique
+  profilePicture String?
+  deviceToken    String?
+  countryCode    String?
+
+  latitude     Float?
+  longitude    Float?
+  authProvider String?
+  status       UserStatus @default(ACTIVE) // User account status
+  statusReason String? // Reason for On Hold or Deactivated
+  isActive     Int        @default(1) // Keep for backward compatibility (1=active, 0=inactive)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  // Stripe Integration
+  stripeCustomerId String? @unique // Stripe customer ID for saved cards
+
+  // Relations
+  carts               Cart[]
+  orders              Order[]
+  wishlist            Wishlist[]
+  reviews             KitchenReview[]
+  savedCards          SavedCard[]
+  userAccountRequests UserAccountRequest[]
+
+  @@map("users")
+}
+
+model UserAccountRequest {
+  id                  Int                 @id @default(autoincrement())
+  userId              Int
+  requestType         StatusRequestType
+  reasonType          String? // Fraud, Scam, etc.
+  reasonText          String? // Custom input
+  requestedAt         DateTime            @default(now())
+  scheduledDeletionAt DateTime
+  status              StatusRequestStatus @default(PENDING)
+  completedAt         DateTime?
+  isSeen              Boolean             @default(false)
+  user                User                @relation(fields: [userId], references: [userId])
+
+  @@map("user_account_requests")
+}
+
+enum StatusRequestType {
+  INACTIVE
+  DELETE
+}
+
+enum StatusRequestStatus {
+  PENDING
+  CANCELLED
+  COMPLETED
+}
+
+model VerifyMobileNumber {
+  id          Int      @id @default(autoincrement())
+  phoneNumber String   @unique
+  otp         String
+  isVerified  Int      @default(0)
+  status      Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([phoneNumber, isVerified, status])
+  @@map("verify_mobile_number")
+}
+
+model VerifyEmail {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  otp        String
+  isVerified Int      @default(0)
+  status     Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([email, isVerified, status])
+  @@map("verify_email")
+}
+
+model Kitchen {
+  kitchenId        Int           @id @default(autoincrement())
+  password         String
+  kitchenName      String
+  email            String?
+  ownerName        String?
+  contactNumber    String?
+  openingTime      String?
+  closingTime      String?
+  description      String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  status           KitchenStatus @default(PENDING)
+  complianceStatus KitchenStatus @default(PENDING)
+  isActive         Int           @default(1)
+  rating           Decimal       @default(0)
+  ratingCount      Int           @default(0)
+  deviceToken      String?
+  deviceTokens     Json?
+  rejectReason     String?
+  cuisines         Cuisine[]
+  foodtypes        foodtype[]
+  notificationTime Int           @default(10)
+
+  stripeAccountId           String?
+  stripeOauthAccessToken    String?
+  stripeOauthRefreshToken   String?
+  stripeOauthPublishableKey String?
+  stripeOauthScope          String?
+  stripeConnectedAt         DateTime?
+  stripeAccountConnected    Boolean   @default(false)
+  stripeOnboardingCompleted Boolean   @default(false)
+  stripeCompletedAt         DateTime?
+  stripeIntegrationType     String?
+
+  otp       String?
+  otpStatus Int?
+
+  timezoneId      Int? // Optional timezone selection
+  // Relations
+  address         KitchenAddress?
+  kyc             KitchenKyc?
+  photos          KitchenPhotos?
+  items           MenuItem[]
+  orders          Order[]
+  wishlist        Wishlist[]
+  reviews         KitchenReview[]
+  teamMembers     TeamMember[]
+  ledger          KitchenLedger[]
+  kitchenPayouts  KitchenPayout[]
+  timezone        Timezone?               @relation(fields: [timezoneId], references: [id])
+  monthlyInvoices MonthlyInvoice[]
+  operatingHours  KitchenOperatingHours[]
+  // kitchenActivityLogs KitchenActivityLog[]
+
+  @@map("kitchens")
+}
+
+model KitchenAddress {
+  addressId Int     @id @default(autoincrement())
+  kitchenId Int     @unique
+  houseNo   String?
+  street    String?
+  pincode   String?
+  state     String?
+  city      String?
+  country   String?
+  landmark  String?
+  latitude  Float?
+  longitude Float?
+  kitchen   Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@map("kitchen_address")
+}
+
+model KitchenKyc {
+  kycId                 Int       @id @default(autoincrement())
+  kitchenId             Int       @unique
+  abnNumber             String?
+  acn                   String?
+  foodCertificateNumber String?
+  foodCertificateImage  String?
+  foodCertificateImages Json?
+  expireDate            DateTime?
+  fssaiNumber           String?
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@map("kitchen_kyc")
+}
+
+model KitchenPhotos {
+  id                  Int     @id @default(autoincrement())
+  kitchenId           Int     @unique
+  kitchenImages       Json? // store array of image URLs
+  kitchenProfilePhoto String?
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@map("kitchen_photos")
+}
+
+model KitchenOperatingHours {
+  id        Int       @id @default(autoincrement())
+  kitchenId Int
+  day       DayOfWeek
+  openTime  String? // HH:mm
+  closeTime String? // HH:mm
+  isClosed  Boolean   @default(false)
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@unique([kitchenId, day])
+  @@map("kitchen_operating_hours")
+}
+
+model foodtype {
+  id        Int        @id @default(autoincrement())
+  name      String
+  image     String?
+  isActive  Int        @default(1)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  question  String?
+  type      FoodType   @default(KITCHEN) //  (KITCHEN Or MENU)
+  menuItems MenuItem[] @relation("MenuItemFoodTypes")
+  kitchens  Kitchen[]
+}
+
+model MenuItem {
+  id                 Int        @id @default(autoincrement())
+  kitchenId          Int
+  name               String
+  categoryIds        Category[] @relation("MenuItemCategories")
+  quantity           Int
+  price              Float
+  discountPrice      Float
+  discountPercentage Int
+  description        String?
+  image              String?
+  isVegetarian       Boolean    @default(false)
+  isSpicy            SpicyLevel @default(NORMAL)
+  isActive           Int        @default(1)
+  startTime          String?
+  endTime            String?
+  startTimeDate      String?
+  endTimeDate        String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  rating             Decimal    @default(0) @db.Decimal(3, 2)
+  ratingCount        Int        @default(0)
+
+  foodtypeIds foodtype[] @relation("MenuItemFoodTypes")
+
+  kitchen   Kitchen?    @relation(fields: [kitchenId], references: [kitchenId])
+  cartItems CartItem[]
+  orders    OrderItem[]
+
+  @@map("menu_items")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  isActive  Int      @default(1)
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isPopular Int      @default(0)
+
+  items MenuItem[] @relation("MenuItemCategories") // <– many-to-many back relation
+
+  @@map("categories")
+}
+
+model Cuisine {
+  id        Int       @id @default(autoincrement())
+  name      String
+  isActive  Int       @default(1)
+  image     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isPopular Int       @default(0)
+  kitchens  Kitchen[]
+
+  @@map("cuisines")
+}
+
+model Cart {
+  cartId   Int @id @default(autoincrement())
+  userId   Int
+  isActive Int @default(1) // 1 = active, 0 = cleared/ordered
+
+  user  User?      @relation(fields: [userId], references: [userId])
+  items CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cart")
+}
+
+model CartItem {
+  cartItemId Int @id @default(autoincrement())
+  cartId     Int
+  menuItemId Int
+  quantity   Int @default(1)
+
+  cart Cart?     @relation(fields: [cartId], references: [cartId])
+  menu MenuItem? @relation(fields: [menuItemId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cart_items")
+}
+
+model Order {
+  orderId      Int          @id @default(autoincrement())
+  orderNumber  Int          @unique
+  orderUid     String       @unique
+  userId       Int
+  kitchenId    Int
+  deliveryType DeliveryType @default(PICKUP)
+  status       OrderStatus  @default(PENDING)
+  itemTotal    Float
+  gstAmount    Float        @default(0) // ⭐ GST 5%
+  platformFee  Float        @default(0) // ⭐ Delivery partner fee
+  discount     Float        @default(0)
+  totalAmount  Float // ⭐ Final total
+  pickupId     String?
+
+  paymentMethod PaymentMethod?
+  paymentStatus PaymentStatus  @default(PENDING)
+
+  createdAt              DateTime                @default(now())
+  orderedAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  acceptedAt             DateTime?
+  preparedAt             DateTime?
+  pickedAt               DateTime?
+  // 🔥 Add these fields for cancel order functionality
+  cancelReason           String?
+  cancelledAt            DateTime?
+  rating                 Decimal                 @default(0) @db.Decimal(3, 2)
+  pickupStartTime        String?
+  pickupEndTime          String?
+  user                   User?                   @relation(fields: [userId], references: [userId])
+  kitchen                Kitchen?                @relation(fields: [kitchenId], references: [kitchenId])
+  items                  OrderItem[]
+  review                 KitchenReview?
+  payment                OrderPayment[]
+  orderInvoice           OrderInvoice?
+  restaurantOrderInvoice RestaurantOrderInvoice?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  orderItemId Int @id @default(autoincrement())
+  orderId     Int
+  menuItemId  Int
+
+  quantity   Int // how many ordered
+  price      Float
+  totalPrice Float
+
+  menu  MenuItem? @relation(fields: [menuItemId], references: [id])
+  order Order?    @relation(fields: [orderId], references: [orderId])
+
+  @@map("order_items")
+}
+
+model OrderInvoice {
+  invoiceId     Int      @id @default(autoincrement())
+  orderId       Int      @unique
+  invoiceNumber String   @unique
+  pdfUrl        String?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [orderId])
+
+  @@map("order_invoices")
+}
+
+model RestaurantOrderInvoice {
+  invoiceId         Int      @id @default(autoincrement())
+  orderId           Int      @unique
+  invoiceNumber     String   @unique
+  pdfUrl            String?
+  serviceFeePercent Float    @default(15)
+  createdAt         DateTime @default(now())
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [orderId])
+
+  @@map("restaurant_order_invoices")
+}
+
+model Config {
+  configId    Int      @id @default(autoincrement())
+  configKey   String   @default("NA") @db.VarChar(45)
+  configValue String   @default("NA") @db.VarChar(45)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("config")
+}
+
+model Wishlist {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  kitchenId Int
+
+  createdAt DateTime @default(now())
+
+  user    User?    @relation(fields: [userId], references: [userId])
+  kitchen Kitchen? @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@unique([userId, kitchenId]) // ⭐ Prevent duplicate wishlist items
+  @@map("wishlist")
+}
+
+model Coupon {
+  couponId       Int        @id @default(autoincrement())
+  adminId        Int
+  couponCode     String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime
+  type           CouponType
+  title          String?    @default("NA")
+  offerValue     Float
+  maxDiscount    Float
+  minOrderAmount Float?
+
+  status Int @default(1) // 1=active, 0=inactive, 2=deleted
+
+  createdAt DateTime @default(now())
+
+  @@map("coupons")
+}
+
+model KitchenReview {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @unique
+  userId    Int
+  kitchenId Int
+  rating    Decimal  @db.Decimal(3, 2)
+  review    String?
+  images    Json?
+  createdAt DateTime @default(now())
+
+  // 🟢 Logical relations (NO foreign keys)
+  order   Order?   @relation(fields: [orderId], references: [orderId])
+  user    User?    @relation(fields: [userId], references: [userId])
+  kitchen Kitchen? @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@map("kitchen_reviews")
+}
+
+model Notification {
+  id                  Int      @id @default(autoincrement())
+  ownerId             Int
+  ownerType           UserRole @default(USER)
+  title               String
+  message             String
+  orderId             Int?
+  type                Int      @default(1)
+  isRead              Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  isAdminNotification Boolean  @default(false)
+
+  @@map("notifications")
+}
+
+model AdminAlert {
+  id        Int       @id @default(autoincrement())
+  kitchenId Int? // Kitchen that triggered the alert (optional)
+  userId    Int? // User that triggered the alert (optional)
+  alertType String // e.g., "FOOD_CERTIFICATE", "KYC_EXPIRING", "NEW_KITCHEN", etc.
+  title     String
+  message   String
+  isViewed  Boolean   @default(false)
+  viewedAt  DateTime?
+  viewedBy  Int? // Admin ID who viewed it
+  createdAt DateTime  @default(now())
+  metadata  Json?
+
+  @@index([isViewed, createdAt])
+  @@map("admin_alerts")
+}
+
+model TeamMember {
+  id           Int      @id @default(autoincrement())
+  kitchenId    Int
+  firstName    String
+  lastName     String?
+  email        String
+  phoneNumber  String?
+  username     String   @unique
+  password     String
+  profilePhoto String?
+  isActive     Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@map("team_members")
+}
+
+model Pages {
+  id       Int    @id @default(autoincrement())
+  pageName String
+
+  @@map("pages")
+}
+
+enum LedgerType {
+  CREDIT
+  DEBIT
+}
+
+model KitchenLedger {
+  ledgerId    Int        @id @default(autoincrement())
+  kitchenId   Int
+  orderId     Int?
+  type        LedgerType
+  amount      Decimal    @db.Decimal(20, 2)
+  description String?
+  createdAt   DateTime   @default(now())
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@index([kitchenId, createdAt])
+}
+
+model KitchenPayout {
+  payoutId          Int      @id @default(autoincrement())
+  kitchenId         Int
+  periodStart       DateTime
+  periodEnd         DateTime
+  totalOrderAmount  Decimal? @db.Decimal(20, 2) // Total amount from all orders (before platform fee)
+  platformFeeAmount Decimal? @db.Decimal(20, 2) // Total platform fees deducted
+  payoutAmount      Decimal  @db.Decimal(20, 2) // Net amount paid to kitchen (totalOrderAmount - platformFeeAmount)
+  ordersCount       Int?     @default(0) // Number of orders in this payout
+  stripeTransferId  String
+  createdAt         DateTime @default(now())
+
+  invoice PayoutInvoice?
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+}
+
+model PayoutInvoice {
+  invoiceId     Int      @id @default(autoincrement())
+  payoutId      Int      @unique // 🔥 THIS FIXES THE ERROR
+  invoiceNumber String
+  pdfUrl        String
+  createdAt     DateTime @default(now())
+
+  payout KitchenPayout @relation(fields: [payoutId], references: [payoutId])
+}
+
+model MonthlyInvoice {
+  invoiceId         Int      @id @default(autoincrement())
+  kitchenId         Int
+  invoiceNumber     String   @unique
+  month             Int // 1-12
+  year              Int
+  periodStart       DateTime
+  periodEnd         DateTime
+  totalOrderAmount  Decimal  @db.Decimal(20, 2) // Total amount from all orders (before platform fee)
+  platformFeeAmount Decimal  @db.Decimal(20, 2) // Total platform fees deducted
+  netAmount         Decimal  @db.Decimal(20, 2) // Net amount (totalOrderAmount - platformFeeAmount)
+  ordersCount       Int      @default(0) // Number of orders in this invoice
+  pdfUrl            String
+  createdAt         DateTime @default(now())
+
+  kitchen Kitchen @relation(fields: [kitchenId], references: [kitchenId])
+
+  @@unique([kitchenId, month, year]) // Prevent duplicate invoices for same kitchen/month/year
+  @@index([month, year])
+  @@map("monthly_invoices")
+}
+
+enum PaymentProvider {
+  STRIPE
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  AUTHORIZED
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model OrderPayment {
+  orderPaymentId Int @id @default(autoincrement())
+
+  // 🔗 Relations
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [orderId])
+
+  // 💳 Provider info
+  provider PaymentProvider @default(STRIPE)
+
+  // 🔑 Stripe identifiers
+  paymentIntentId String  @unique
+  chargeId        String?
+  refundId        String?
+
+  // 💰 Amounts
+  amount   Float
+  currency String @default("inr")
+
+  // 📌 Status
+  status        PaymentAttemptStatus @default(CREATED)
+  failureReason String?
+
+  // 🕒 Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@map("order_payments")
+}
+
+// ========================================
+// 💳 SAVED CARDS (STRIPE PAYMENT METHODS)
+// ========================================
+model SavedCard {
+  cardId Int @id @default(autoincrement())
+  userId Int
+
+  // Stripe Payment Method ID
+  stripePaymentMethodId String @unique
+
+  // Card Details (for display)
+  cardBrand       String // visa, mastercard, amex, etc.
+  cardLast4       String // Last 4 digits
+  cardExpMonth    Int // Expiry month (1-12)
+  cardExpYear     Int // Expiry year (e.g., 2026)
+  cardHolderName  String? // Cardholder name if available
+  cardFingerprint String? // Unique fingerprint to detect duplicates
+
+  // Default card flag
+  isDefault Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripePaymentMethodId])
+  @@map("saved_cards")
+}
+
+model ChatRoom {
+  roomId    Int      @id @default(autoincrement())
+  userId    Int?
+  kitchenId Int?
+  status    String   @default("OPEN") // OPEN | CLOSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  messageId  Int      @id @default(autoincrement())
+  roomId     Int
+  senderRole String // USER | KITCHEN | ADMIN
+  senderId   Int?
+  adminId    Int? // only when ADMIN sends
+  message    String?
+  image      String?
+  isRead     Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  room ChatRoom @relation(fields: [roomId], references: [roomId])
+
+  @@map("chat_messages")
+}
+
+enum CouponType {
+  FLAT
+  PERCENTAGE
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHER
+}
+
+enum KitchenStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DeliveryType {
+  PICKUP
+}
+
+enum OrderStatus {
+  PAYMENT_PENDING
+  PENDING
+  ACCEPTED
+  PREPARING
+  READY
+  PICKED
+  NO_SHOW
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
+  CARD
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum UserRole {
+  USER
+  KITCHEN
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum SpicyLevel {
+  NORMAL
+  MEDIUM
+  EXTRA_SPICY
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  DELETING_SOON
+  DELETED
+}
+
+enum FoodType {
+  KITCHEN
+  MENU
+}
+
+enum DayOfWeek {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+model Timezone {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // e.g., "Asia/Kolkata", "America/New_York"
+  displayName String // e.g., "India Standard Time (IST)"
+  offset      String // e.g., "+05:30", "-05:00"
+  isActive    Int      @default(1) // 1=active, 2=soft deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  kitchens Kitchen[]
+
+  @@map("timezones")
+}
+
+// ========================================
+// 🔍 RESTAURANT AUDIT TRAIL SYSTEM
+// Immutable, timestamped logs for all critical restaurant actions
+// ========================================
+
+model RestaurantAuditLog {
+  id Int @id @default(autoincrement())
+
+  // ========================================
+  // 🎯 CORE IDENTIFIERS
+  // ========================================
+  kitchenId Int // Restaurant being tracked
+
+  // ========================================
+  // 👤 ACTOR INFORMATION (Who performed the action)
+  // ========================================
+  actorType ActorType // ADMIN, SYSTEM, RESTAURANT
+  actorId   Int? // Admin ID or Kitchen ID (null for SYSTEM)
+  actorName String? // Name for quick reference
+  actorRole String? // SUPER_ADMIN, ADMIN, KITCHEN_OWNER, TEAM_MEMBER
+
+  // ========================================
+  // 📋 ACTION DETAILS
+  // ========================================
+  actionType        AuditActionType // Type of action performed
+  actionDescription String? // Human-readable description
+
+  // ========================================
+  // 📊 STATE TRACKING (Before & After)
+  // ========================================
+  oldData Json? @db.JsonB // Previous state/values (supports int, string, object, array, boolean, null)
+  newData Json? @db.JsonB // New state/values (supports int, string, object, array, boolean, null)
+
+  // ========================================
+  // 📝 REASON & NOTES
+  // ========================================
+  reason String? // Rejection/suspension reason (mandatory for certain actions)
+  notes  String? // Additional notes or context
+
+  // ========================================
+  // 🔗 RELATED RESOURCES
+  // ========================================
+  resourceType String? // Type of resource affected (e.g., "order", "menu", "kyc")
+  resourceId   Int? // ID of the affected resource
+
+  // ========================================
+  // 📦 METADATA (Flexible JSON for additional data)
+  // ========================================
+  metadata Json? // Additional structured data
+
+  // ========================================
+  // 🌐 REQUEST TRACKING
+  // ========================================
+  ipAddress String? // IP address of the actor
+  userAgent String? // Browser/device info
+
+  // ========================================
+  // 🕒 TIMESTAMP (UTC - Immutable)
+  // ========================================
+  createdAt DateTime @default(now())
+
+  // ========================================
+  // 🔒 INDEXES FOR PERFORMANCE
+  // ========================================
+  @@index([kitchenId])
+  @@index([actionType])
+  @@index([actorType])
+  @@index([createdAt])
+  @@index([kitchenId, actionType])
+  @@index([kitchenId, createdAt])
+  @@map("restaurant_audit_logs")
+}
+
+// ========================================
+// 🏷️ AUDIT ENUMS
+// ========================================
+
+enum ActorType {
+  ADMIN // Admin user performed the action
+  SYSTEM // System-generated action (automated)
+  RESTAURANT // Restaurant/Kitchen performed the action
+}
+
+enum AuditActionType {
+  // ========================================
+  // 🏪 REGISTRATION & ONBOARDING
+  // ========================================
+  RESTAURANT_REGISTERED // Initial registration
+  // REGISTRATION_SUBMITTED // Registration form submitted
+
+  // ========================================
+  // ✅ APPROVAL / REJECTION FLOW
+  // ========================================
+  STATUS_APPROVED // Pending → Approved
+  STATUS_REJECTED // Pending → Rejected
+  STATUS_REAPPLIED // Rejected → Pending (reapplication)
+  STATUS_REAPPROVED // Rejected → Approved (after reapplication)
+  STATUS_REREJECTED // Reapplied → Rejected again
+  STATUS_EXPIRED // Status expired
+  // STATUS_CHANGED // Generic status change
+
+  // ========================================
+  // ✅ COMPLIANCE STATUS FLOW
+  // ========================================
+  COMPLIANCE_APPROVED // complianceStatus: Pending/Rejected → Approved
+  COMPLIANCE_REAPPROVED // complianceStatus: Rejected → Approved (re-approval)
+  COMPLIANCE_REJECTED // complianceStatus: Pending → Rejected
+  COMPLIANCE_REREJECTED // complianceStatus: Approved/Rejected → Rejected again
+
+  // ========================================
+  // 💳 STRIPE ACCOUNT MANAGEMENT
+  // ========================================
+  STRIPE_ACCOUNT_LINKED // Stripe account linked (first time)
+  STRIPE_ACCOUNT_LINKED_AUTO // Stripe account linked automatically
+  STRIPE_ACCOUNT_LINKED_MANUAL // Stripe account linked manually by admin
+  STRIPE_ACCOUNT_CHANGED // Stripe account ID changed
+  // STRIPE_ACCOUNT_DISCONNECTED // Stripe account disconnected
+  // STRIPE_ONBOARDING_STARTED // Stripe onboarding initiated
+  // STRIPE_ONBOARDING_COMPLETED // Stripe onboarding completed
+
+  FOOD_CERTIFICATE_EXPIRED // Food certificate expired (system)
+  FOOD_CERTIFICATE_ADDED // New food certificate added
+
+  // ========================================
+  // 🏢 PROFILE UPDATES
+  // ========================================
+  // PROFILE_UPDATED // General profile update
+  // CONTACT_INFO_UPDATED // Contact information changed
+  // ADDRESS_UPDATED // Address changed
+  // BUSINESS_HOURS_UPDATED // Opening/closing times changed
+  // KITCHEN_UPDATED // Kitchen profile updated (comprehensive)
+}
+
+model StripeEventLog {
+  id           Int      @id @default(autoincrement())
+  eventId      String?  @unique
+  eventType    String
+  account      String?
+  body         Json
+  isV2         Boolean  @default(false)
+  status       String   @default("RECEIVED") // RECEIVED, PROCESSED, FAILED
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  @@map("stripe_event_logs")
+}
