@@ -1,0 +1,823 @@
+.add-items {
+  display: grid;
+  /* height: 100%; */
+  gap: 2rem;
+  padding: 1rem;
+}
+.add-items-forms {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3rem 0;
+  height: 100%;
+}
+.fileUploadBox {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+.fileUploadBox svg {
+  color: #0e9f6e;
+  font-size: 2rem;
+}
+.fileUploadBox h5 {
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+.fileUploadBox p {
+  color: #9e9e9e;
+  font-size: 0.8rem;
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+.item-image-upload label,
+.item-tag-input label {
+  font-family: sans-serif;
+  color: #24262d;
+  font-size: 14px;
+}
+.item-image-upload {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  padding: 0 1rem;
+}
+.price-wrapper-product .item-image-upload {
+  gap: 0.5rem;
+}
+.fileUploadContainer {
+  border: 2px dashed #d5d6d7;
+  width: 99%;
+  height: 9rem;
+  display: grid;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 4px;
+}
+
+.previewContainer {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+}
+
+.previewContainer img {
+  width: 9rem;
+  height: 8rem;
+  object-fit: contain;
+  overflow: hidden;
+}
+.imageControls {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.changeButton {
+  padding: 0.3rem 0.8rem;
+  background-color: #0e9f6e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.changeButton:hover {
+  background-color: #057a55;
+}
+
+.removeButton {
+  padding: 0.3rem 0.8rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.removeButton:hover {
+  background-color: #dc2626;
+}
+
+.fileUploadLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-flow: column;
+}
+
+.cropperContainer {
+  border: 1px solid #d5d6d7;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  position: relative;
+}
+
+.cropperContainer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  width: auto;
+  height: auto;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(14, 159, 110, 0.2);
+  border-top: 3px solid #0e9f6e;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.uploadText {
+  margin: 6px 0;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.acceptedFormats {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
+.fileUploadContainer.withCropper {
+  height: auto;
+  min-height: 400px;
+}
+
+.dimensionControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.dimensionInput {
+  width: 60px;
+  padding: 2px 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.dimensionLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.aspectRatioButton {
+  padding: 3px 8px;
+  font-size: 11px;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.aspectRatioButton:hover {
+  background: #d1d5db;
+}
+
+.aspectRatioButton.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.cropperControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f8f8;
+  border-top: 1px solid #ddd;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 50px;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 95vw;
+  max-height: 95vh;
+  width: 700px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.helpText {
+  margin: 4px 0 0 0;
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 400;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.cancelButton {
+  padding: 8px 16px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cancelButton:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.cropButton {
+  padding: 8px 16px;
+  background: #0e9f6e;
+  color: white;
+  border: 1px solid #0e9f6e;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cropButton:hover:not(:disabled) {
+  background: #057a55;
+  border-color: #057a55;
+}
+
+.cropButton:disabled {
+  background: #9ca3af;
+  border-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.controlLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.aspectRatioButtons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.aspectRatioButton {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.aspectRatioButton:hover {
+  background: #d1d5db;
+}
+
+.aspectRatioButton.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #2563eb;
+}
+
+.rangeInput {
+  width: 80px;
+  height: 20px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e5e7eb;
+  outline: none;
+  border-radius: 10px;
+}
+
+.rangeInput::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #0e9f6e;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.rangeInput::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #0e9f6e;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.rangeValue {
+  font-size: 11px;
+  color: #6b7280;
+  min-width: 30px;
+  text-align: center;
+}
+
+.resetButton {
+  padding: 6px 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.resetButton:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.formatSelect {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.formatSelect:focus {
+  outline: none;
+  border-color: #0e9f6e;
+  box-shadow: 0 0 0 1px rgba(14, 159, 110, 0.2);
+}
+
+/* ReactCrop custom styles (must be global to affect library classes) */
+:global(.ReactCrop__crop-selection) {
+  border: 2px solid #0e9f6e;
+  box-shadow: 0 0 0 1px rgba(14, 159, 110, 0.3);
+}
+
+:global(.ReactCrop__drag-handle) {
+  background: #0e9f6e;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(14, 159, 110, 0.3);
+}
+
+:global(.ReactCrop__drag-handle::after) {
+  background: white;
+}
+
+/* Remove/diminish the dark mask outside the crop area */
+:global(.ReactCrop__crop-mask) {
+  background-color: transparent !important;
+}
+
+/* Optional: hide grid lines if they appear */
+:global(.ReactCrop__grid) {
+  display: none !important;
+}
+
+/* Text to Audio Component Styles */
+.textToAudioWrapper {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.textToAudioLabel {
+  display: block;
+  font-weight: 600;
+  color: #24262d;
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-family: sans-serif;
+}
+
+.textToAudioBox {
+  border: 2px dashed #d5d6d7;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+  transition: all 0.3s ease;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.textToAudioBox:hover {
+  border-color: #0e9f6e;
+  background: #f0fdf4;
+}
+
+.textToAudioContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 16px;
+}
+
+.textInputSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.textAreaWrapper {
+  position: relative;
+}
+
+.textArea {
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  transition: border-color 0.3s ease;
+}
+
+.textArea:hover {
+  border-color: #0e9f6e;
+}
+
+.textArea:focus {
+  border-color: #0e9f6e;
+  box-shadow: 0 0 0 3px rgba(14, 159, 110, 0.1);
+}
+
+.generateButton {
+  height: 48px;
+  border-radius: 6px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0e9f6e 0%, #057a55 100%);
+  border: none;
+  box-shadow: 0 2px 4px rgba(14, 159, 110, 0.2);
+  transition: all 0.3s ease;
+}
+
+.generateButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(14, 159, 110, 0.3);
+}
+
+.generateButton:disabled {
+  background: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
+.audioPreviewWrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.audioPreviewContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 400px;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.audioPlayer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.audioPlayer audio {
+  width: 100%;
+  height: 40px;
+  border-radius: 4px;
+}
+
+.audioWaveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 20px;
+  width: 100%;
+}
+
+.audioWaveformBar {
+  width: 4px;
+  background: linear-gradient(135deg, #0e9f6e 0%, #057a55 100%);
+  border-radius: 2px;
+  animation: waveform 1.5s ease-in-out infinite;
+}
+
+.audioWaveformBar:nth-child(1) {
+  animation-delay: 0s;
+  height: 8px;
+}
+.audioWaveformBar:nth-child(2) {
+  animation-delay: 0.1s;
+  height: 12px;
+}
+.audioWaveformBar:nth-child(3) {
+  animation-delay: 0.2s;
+  height: 16px;
+}
+.audioWaveformBar:nth-child(4) {
+  animation-delay: 0.3s;
+  height: 12px;
+}
+.audioWaveformBar:nth-child(5) {
+  animation-delay: 0.4s;
+  height: 8px;
+}
+
+@keyframes waveform {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.audioControls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.playButton {
+  background: linear-gradient(135deg, #0e9f6e 0%, #057a55 100%);
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(14, 159, 110, 0.2);
+  transition: all 0.3s ease;
+}
+
+.playButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(14, 159, 110, 0.3);
+}
+
+.removeButton {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+}
+
+.removeButton:hover {
+  background: #dc2626;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.2);
+}
+
+.helpText {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.helpText p {
+  margin: 4px 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.helpText p:first-child {
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Text to Audio Responsive Design */
+@media (max-width: 768px) {
+  .textToAudioBox {
+    padding: 16px;
+    min-height: 180px;
+  }
+
+  .textToAudioContainer {
+    gap: 12px;
+  }
+
+  .textInputSection {
+    gap: 12px;
+  }
+
+  .generateButton {
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .audioPreviewContainer {
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .audioControls {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .playButton,
+  .removeButton {
+    width: 100%;
+  }
+
+  .helpText {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .textToAudioBox {
+    padding: 12px;
+    min-height: 160px;
+  }
+
+  .generateButton {
+    height: 40px;
+    font-size: 13px;
+  }
+
+  .audioPreviewContainer {
+    padding: 12px;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modalContent {
+    width: 95vw;
+    height: 85vh;
+    max-height: 85vh;
+  }
+
+  .cropperContainer {
+    height: 400px;
+  }
+
+  .cropperControls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .controlGroup {
+    justify-content: space-between;
+  }
+
+  .aspectRatioButtons {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalContent {
+    width: 98vw;
+    height: 90vh;
+    max-height: 90vh;
+  }
+
+  .cropperContainer {
+    height: 350px;
+  }
+
+  .modalHeader {
+    padding: 15px;
+  }
+
+  .modalActions {
+    padding: 15px;
+  }
+}
