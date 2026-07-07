@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "806216671042",
+    "project_id": "resqbox-2740d",
+    "storage_bucket": "resqbox-2740d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806216671042:android:36ef00bf3598c7deb8b2db",
+        "android_client_info": {
+          "package_name": "com.owner.resqbox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "806216671042-jdao0vslg1b6jnscm0e5r32tsvojas39.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtm7Aio4UXpbTYcCi_2CBRSMRuQGItPZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "806216671042-jdao0vslg1b6jnscm0e5r32tsvojas39.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "806216671042-5v4na1bvv3h36qvmdnugbrhie0vj5cov.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.user.resqbox"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806216671042:android:e8ec638a779d7895b8b2db",
+        "android_client_info": {
+          "package_name": "com.user.resqbox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "806216671042-16e5qhc94bfkuhuor9jq6mctom012ugc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.user.resqbox",
+            "certificate_hash": "8bd05b9b880a5b7617c2204f9db6fd1b268bf02b"
+          }
+        },
+        {
+          "client_id": "806216671042-jdao0vslg1b6jnscm0e5r32tsvojas39.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtm7Aio4UXpbTYcCi_2CBRSMRuQGItPZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "806216671042-jdao0vslg1b6jnscm0e5r32tsvojas39.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "806216671042-5v4na1bvv3h36qvmdnugbrhie0vj5cov.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.user.resqbox"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,88 @@
+# -----------------------------------
+# 🛑 General OS & System Files
+# -----------------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------------
+# Node / Web (if used)
+# -----------------------------------
+node_modules/
+dist/
+
+# -----------------------------------
+# Build Outputs
+# -----------------------------------
+build/
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# -----------------------------------
+# Logs & Temp
+# -----------------------------------
+*.log
+
+# -----------------------------------
+# Android Specific
+# -----------------------------------
+android/.gradle/
+android/app/build/
+android/local.properties
+android/app/captures/
+android/app/.cxx/
+
+# Gradle Wrapper (optional, safe to ignore)
+gradle-wrapper.jar
+gradlew
+gradlew.bat
+
+# -----------------------------------
+# iOS Specific
+# -----------------------------------
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/App.framework
+ios/Podfile.lock
+**/xcuserdata/
+**/DerivedData/
+*.xcworkspace
+
+# -----------------------------------
+# Windows/Linux/Mac Desktop Builds
+# -----------------------------------
+linux/build/
+macos/Flutter/ephemeral/
+windows/build/
+
+# -----------------------------------
+# IDE / Tooling
+# -----------------------------------
+.idea/
+.vscode/
+*.class
+*.py[cod]
+
+# -----------------------------------
+# Testing
+# -----------------------------------
+TEST*.xml
+
+# -----------------------------------
+# Media (Large Files)
+# -----------------------------------
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv
+
+# -----------------------------------
+# Flutter Generated Files
+# -----------------------------------
+GeneratedPluginRegistrant.java
+GeneratedPluginRegistrant.swift
+
