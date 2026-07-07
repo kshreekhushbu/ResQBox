@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="facebook_app_id">1995221304388567</string>
+    <string name="app_name">ResQBox Food</string>
+    <string name="fb_login_protocol_scheme">fb1995221304388567</string>
+    <string name="facebook_client_token">8f005bf5b88a0019558a18b18911b2e0</string>
+</resources>

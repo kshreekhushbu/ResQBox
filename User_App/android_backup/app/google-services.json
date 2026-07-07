@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "806216671042",
+    "project_id": "resqbox-2740d",
+    "storage_bucket": "resqbox-2740d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806216671042:android:36ef00bf3598c7deb8b2db",
+        "android_client_info": {
+          "package_name": "com.owner.resqbox"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+        "current_key": "AIzaSyBtm7Aio4UXpbTYcCi_2CBRSMRuQGItPZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806216671042:android:e8ec638a779d7895b8b2db",
+        "android_client_info": {
+          "package_name": "com.user.resqbox"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtm7Aio4UXpbTYcCi_2CBRSMRuQGItPZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
