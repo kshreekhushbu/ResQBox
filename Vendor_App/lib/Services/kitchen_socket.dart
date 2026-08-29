@@ -8,6 +8,7 @@ import 'package:resqboxvendor/Services/api.dart';
 import 'package:resqboxvendor/Utils/notification_service.dart';
 import 'package:resqboxvendor/Utils/sound_service.dart';
 import 'package:resqboxvendor/Models/local_notifications_model.dart';
+import 'package:resqboxvendor/Utils/shared_preference_helper.dart';
 
 class KitchenSocket {
   late IO.Socket socket;
@@ -18,15 +19,19 @@ class KitchenSocket {
   bool get isConnected => _isConnected;
 
   // Call this after login
-  void connect(int kitchenId) {
+  void connect(int kitchenId) async {
     try {
+      final prefs = await SharedPreferencesHelper.getInstance();
+      final token = prefs.getString('ApiToken') ?? '';
+
       socket = IO.io(
         Api.socketUrl,
         IO.OptionBuilder()
             .setTransports(['websocket'])
-            .setQuery({"kitchenId": kitchenId.toString()}) // auto join room
-            .disableAutoConnect() // connect manually
-            .enableReconnection() // Ensure reconnection is enabled
+            .setAuth({'token': token})
+            .setExtraHeaders({'Authorization': 'Bearer $token'})
+            .disableAutoConnect()
+            .enableReconnection()
             .build(),
       );
 

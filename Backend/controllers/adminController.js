@@ -13,31 +13,40 @@ const { generateUID } = require("./handleFactory");
 const { messaging } = require("firebase-admin");
 const { getIO } = require("../utils/socket");
 const auditLogger = require('../utils/auditLogger');
+const { generateOtp, isOtpFresh } = require("../utils/otp");
+const { issueResetToken, verifyResetToken } = require("../utils/passwordReset");
 
 
 exports.adminSignUp = catchAsync(async (req, res) => {
   try {
-    const { name, emailId, password, roleId } = req.body;
+    const adminCount = await prisma.adminUsers.count();
+    if (adminCount > 0) {
+      return res.status(403).json({
+        status: 0,
+        message: "Admin registration is closed. Use an authenticated admin to create users."
+      });
+    }
 
-    // Check if email exists
+    const { name, emailId, password } = req.body;
+    if (!name || !emailId || !password) {
+      return res.status(400).json({ status: 0, message: "Name, email and password are required" });
+    }
+
     const exists = await prisma.adminUsers.findFirst({
-      where: { emailId, status: 1 }
+      where: { emailId }
     });
 
     if (exists) {
       return res.status(400).json({ status: 0, message: "Email already exists" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create admin user
     await prisma.adminUsers.create({
       data: {
         name,
         emailId,
         password: hashedPassword,
-        roleId,
+        roleId: 1,
         token: ""
       }
     });
@@ -106,6 +115,18 @@ exports.adminLogin = catchAsync(async (req, res) => {
     console.error(error);
     return res.status(500).json({ status: 0, Message: "Internal Server Error" });
   }
+});
+
+exports.adminLogout = catchAsync(async (req, res) => {
+  await prisma.adminUsers.update({
+    where: { adminId: req.admin.adminId },
+    data: { token: "" }
+  });
+
+  return res.status(200).json({
+    status: 1,
+    message: "Logged out successfully"
+  });
 });
 
 // ⭐ Dashboard API
@@ -4156,13 +4177,7 @@ exports.sendForgotPasswordOTP = catchAsync(async (req, res) => {
     });
   }
 
-  // Generate 4-digit OTP
-  let otp;
-  if (process.env.NODE_ENV === 'production') {
-    otp = Math.floor(100000 + Math.random() * 900000).toString(); // Random 4-digit OTP in production
-  } else {
-    otp = '123456'; // Fixed OTP for development
-  }
+  const otp = generateOtp();
 
   // Store OTP in database
   await prisma.adminUsers.update({
@@ -4230,32 +4245,34 @@ exports.verifyForgotPasswordOTP = catchAsync(async (req, res) => {
     });
   }
 
-  // Verify OTP matches
-  if (admin.otp !== otp || admin.otpStatus !== 1) {
+  if (admin.otp !== otp || admin.otpStatus !== 1 || !isOtpFresh(admin.updated_at)) {
     return res.status(400).json({
       status: 0,
       message: "Invalid or expired OTP"
     });
   }
 
-  // Mark OTP as verified
   await prisma.adminUsers.update({
     where: { adminId: admin.adminId },
     data: {
-      otpStatus: 0
+      otpStatus: 2,
+      otp: null
     }
   });
+
+  const resetToken = issueResetToken({ email: admin.emailId, audience: "admin" });
 
   return res.status(200).json({
     status: 1,
     message: "OTP verified successfully",
-    email
+    email,
+    resetToken
   });
 });
 
 // 3️⃣ Reset Password
 exports.resetPassword = catchAsync(async (req, res) => {
-  const { email, newPassword } = req.body;
+  const { email, newPassword, resetToken } = req.body;
 
   if (!email || !newPassword) {
     return res.status(400).json({
@@ -4264,7 +4281,23 @@ exports.resetPassword = catchAsync(async (req, res) => {
     });
   }
 
-  // Fetch admin user
+  let decoded;
+  try {
+    decoded = verifyResetToken(resetToken, "admin");
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      status: 0,
+      message: error.message || "Invalid or expired reset token"
+    });
+  }
+
+  if (String(decoded.email).toLowerCase() !== String(email).toLowerCase()) {
+    return res.status(400).json({
+      status: 0,
+      message: "Invalid reset token"
+    });
+  }
+
   const admin = await prisma.adminUsers.findFirst({
     where: {
       emailId: email,
@@ -4272,23 +4305,22 @@ exports.resetPassword = catchAsync(async (req, res) => {
     }
   });
 
-  if (!admin) {
-    return res.status(404).json({
+  if (!admin || admin.otpStatus !== 2) {
+    return res.status(400).json({
       status: 0,
-      message: "Email not found"
+      message: "Password reset is not authorized. Please verify OTP again."
     });
   }
 
-  // Hash new password
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  // Update password
   await prisma.adminUsers.update({
     where: { adminId: admin.adminId },
     data: {
       password: hashedPassword,
-      otp: null, // Clear OTP
-      otpStatus: 0 // Reset OTP status
+      otp: null,
+      otpStatus: 0,
+      token: ""
     }
   });
 

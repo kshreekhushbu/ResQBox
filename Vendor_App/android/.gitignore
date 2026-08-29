@@ -7,4 +7,10 @@ gradle-wrapper.jar
 GeneratedPluginRegistrant.java
 .cxx/
 
+# Signing secrets
+key.properties
+**/*.keystore
+**/*.jks
+
+
 

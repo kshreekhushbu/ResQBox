@@ -15,7 +15,7 @@ class SocketController extends ChangeNotifier {
   IO.Socket? _socket;
 
   /// Initialize and connect the socket
-  void initializeSocketConnection() {
+  Future<void> initializeSocketConnection() async {
     // Disconnect existing socket if any
     if (_socket != null) {
       _socket?.disconnect();
@@ -38,14 +38,15 @@ class SocketController extends ChangeNotifier {
     debugPrint('👤 User ID: $userId');
 
     try {
+      final prefs = await SharedPreferencesHelper.getInstance();
+      final token = prefs.getString('ApiToken') ?? '';
+
       _socket = IO.io(
         Apis.socketBaseUrl,
         IO.OptionBuilder()
             .setTransports(['websocket'])
-            .setQuery({
-              'userId': userId.toString(),
-              'role': 'USER',
-            })
+            .setAuth({'token': token})
+            .setExtraHeaders({'Authorization': 'Bearer $token'})
             .enableAutoConnect()
             .enableReconnection()
             .build(),

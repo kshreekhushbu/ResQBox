@@ -2,13 +2,35 @@ const jwt = require("jsonwebtoken");
 const catchAsync = require("./catchAsync");
 const prisma = require("./prisma");
 
+function extractBearerToken(req) {
+  const header = req.headers.authorization;
+  if (!header) return null;
+  const parts = header.split(" ");
+  if (parts.length === 2 && /^Bearer$/i.test(parts[0]) && parts[1]) {
+    return parts[1];
+  }
+  if (parts.length === 1 && parts[0]) {
+    return parts[0];
+  }
+  return null;
+}
+
+function isSuperAdmin(admin) {
+  if (!admin) return false;
+  if (Number(admin.roleId) === 1) return true;
+  const roleName = String(admin.roleName || "").toLowerCase();
+  return roleName.includes("super");
+}
+
+exports.extractBearerToken = extractBearerToken;
+exports.isSuperAdmin = isSuperAdmin;
+
 exports.authenticateUser = catchAsync(async (req, res, next) => {
-  if (!req.headers.authorization) {
+  const token = extractBearerToken(req);
+  if (!token) {
     return res.status(401).json({ status: 0, message: "Token empty" });
   }
 
-  const token = req.headers.authorization.split(" ")[1];
-  console.log("User token:", token)
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     if (!decoded) {
@@ -16,7 +38,7 @@ exports.authenticateUser = catchAsync(async (req, res, next) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { userId: Number(decoded.userId), status: "ACTIVE" }, // ✅ Use decoded.userId
+      where: { userId: Number(decoded.userId), status: "ACTIVE" },
     });
 
     if (!user) {
@@ -27,26 +49,6 @@ exports.authenticateUser = catchAsync(async (req, res, next) => {
       });
     }
 
-    // // ✅ Check user status
-    // if (user.status === "DEACTIVATED") {
-    //   return res.status(403).json({
-    //     status: 0,
-    //     message: "Your account has been deactivated. Please contact support.",
-    //     accountStatus: "DEACTIVATED",
-    //     reason: user.statusReason
-    //   });
-    // }
-
-    // if (user.status === "ON_HOLD") {
-    //   return res.status(403).json({
-    //     status: 0,
-    //     message: "Your account is on hold. Please contact support.",
-    //     accountStatus: "ON_HOLD",
-    //     reason: user.statusReason
-    //   });
-    // }
-
-    // User is ACTIVE - proceed
     req.user = user;
     next();
   } catch (error) {
@@ -57,15 +59,12 @@ exports.authenticateUser = catchAsync(async (req, res, next) => {
   }
 });
 
-
 exports.authenticateAdmin = catchAsync(async (req, res, next) => {
   try {
-    if (!req.headers.authorization) {
+    const token = extractBearerToken(req);
+    if (!token) {
       return res.status(401).json({ status: 0, message: "Token empty" });
     }
-
-    const token = req.headers.authorization.split(" ")[1];
-    console.log("Admin token:", token);
 
     let decoded;
     try {
@@ -86,12 +85,7 @@ exports.authenticateAdmin = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Check admin exists
-    const admin = await prisma.adminUsers.findUnique({
-      where: { adminId: Number(decoded.adminId) }
-    });
-
-    if (!admin) {
+    if (!decoded.adminId) {
       return res.status(401).json({
         status: 0,
         message: "Unauthorized Admin User",
@@ -99,29 +93,55 @@ exports.authenticateAdmin = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Fetch role name from adminRoles table
-    let roleName = 'ADMIN'; // Default fallback
+    const admin = await prisma.adminUsers.findUnique({
+      where: { adminId: Number(decoded.adminId) }
+    });
+
+    if (!admin || admin.status !== 1) {
+      return res.status(401).json({
+        status: 0,
+        message: "Unauthorized Admin User",
+        isTokenExpired: 1,
+      });
+    }
+
+    if (admin.token !== token) {
+      return res.status(401).json({
+        status: 0,
+        message: "Session expired",
+        isTokenExpired: 1,
+      });
+    }
+
+    let roleName = "ADMIN";
+    let permissions = [];
     if (admin.roleId) {
       try {
         const role = await prisma.adminRoles.findUnique({
           where: { id: admin.roleId },
-          select: { role: true }
+          select: { role: true, permissions: true }
         });
-        if (role && role.role) {
+        if (role?.role) {
           roleName = role.role;
         }
+        if (role?.permissions) {
+          permissions = Array.isArray(role.permissions)
+            ? role.permissions
+            : Array.isArray(role.permissions.permissions)
+              ? role.permissions.permissions
+              : [];
+        }
       } catch (error) {
-        console.log('⚠️ Could not fetch role name:', error.message);
+        console.log("Could not fetch role name:", error.message);
       }
     }
 
-    // Attach admin with role name
     req.admin = {
       ...admin,
-      roleName // Add role name for easy access
+      roleName,
+      permissions
     };
     next();
-
   } catch (error) {
     console.log("AUTH ADMIN ERROR:", error);
     return res.status(500).json({
@@ -131,10 +151,43 @@ exports.authenticateAdmin = catchAsync(async (req, res, next) => {
   }
 });
 
+exports.requirePermission = (pageName, action = "read") =>
+  catchAsync(async (req, res, next) => {
+    if (isSuperAdmin(req.admin)) {
+      return next();
+    }
+
+    const permissions = Array.isArray(req.admin?.permissions)
+      ? req.admin.permissions
+      : [];
+    const item = permissions.find(
+      (entry) =>
+        String(entry.PageName || entry.pageName || "").toLowerCase() ===
+        String(pageName).toLowerCase()
+    );
+
+    if (!item || Number(item[action]) !== 1) {
+      return res.status(403).json({
+        status: 0,
+        message: "Insufficient permissions",
+      });
+    }
+
+    next();
+  });
+
+exports.requireKitchenOwner = catchAsync(async (req, res, next) => {
+  if (req.isTeamMember) {
+    return res.status(403).json({
+      status: 0,
+      message: "This action is limited to the kitchen owner",
+    });
+  }
+  next();
+});
 
 exports.authenticateKitchen = catchAsync(async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  console.log("Kitchen token:", token);
+  const token = extractBearerToken(req);
 
   if (!token) {
     return res.status(401).json({
@@ -145,10 +198,8 @@ exports.authenticateKitchen = catchAsync(async (req, res, next) => {
   }
 
   try {
-    // 🔐 Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    // Validate payload
     if (!decoded.id || decoded.role !== "KITCHEN") {
       return res.status(401).json({
         status: 0,
@@ -157,7 +208,6 @@ exports.authenticateKitchen = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Fetch kitchen from DB
     const kitchen = await prisma.kitchen.findUnique({
       where: { kitchenId: decoded.id }
     });
@@ -170,10 +220,10 @@ exports.authenticateKitchen = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Attach to request
     req.kitchen = kitchen;
+    req.isTeamMember = Boolean(decoded.teamMemberId);
+    req.teamMemberId = decoded.teamMemberId || null;
     next();
-
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
@@ -192,8 +242,7 @@ exports.authenticateKitchen = catchAsync(async (req, res, next) => {
 });
 
 exports.authenticateOptionalKitchen = catchAsync(async (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  console.log("Kitchen token:", token);
+  const token = extractBearerToken(req);
 
   if (!token) {
     return res.status(401).json({
@@ -204,10 +253,8 @@ exports.authenticateOptionalKitchen = catchAsync(async (req, res, next) => {
   }
 
   try {
-    // 🔐 Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
-    // Validate payload
     if (!decoded.id || decoded.role !== "KITCHEN") {
       return res.status(401).json({
         status: 0,
@@ -216,7 +263,6 @@ exports.authenticateOptionalKitchen = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Fetch kitchen from DB
     const kitchen = await prisma.kitchen.findUnique({
       where: { kitchenId: decoded.id }
     });
@@ -229,10 +275,10 @@ exports.authenticateOptionalKitchen = catchAsync(async (req, res, next) => {
       });
     }
 
-    // Attach to request
     req.kitchen = kitchen;
+    req.isTeamMember = Boolean(decoded.teamMemberId);
+    req.teamMemberId = decoded.teamMemberId || null;
     next();
-
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
@@ -250,34 +296,17 @@ exports.authenticateOptionalKitchen = catchAsync(async (req, res, next) => {
   }
 });
 
-/**
- * Optional User Authentication Middleware
- * - If token is provided and valid: sets req.user
- * - If token is missing or invalid: continues without req.user
- * - Never blocks the request
- */
 exports.optionalAuthenticateUser = catchAsync(async (req, res, next) => {
-  // Check if authorization header exists
-  if (!req.headers.authorization) {
-    console.log("No token provided - continuing without authentication");
-    return next(); // ✅ Continue without authentication
-  }
-
-  const token = req.headers.authorization.split(" ")[1];
-
+  const token = extractBearerToken(req);
   if (!token) {
-    console.log("Empty token - continuing without authentication");
-    return next(); // ✅ Continue without authentication
+    return next();
   }
-
-  console.log("Optional user token:", token);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
     if (!decoded || !decoded.userId) {
-      console.log("Invalid token payload - continuing without authentication");
-      return next(); // ✅ Continue without authentication
+      return next();
     }
 
     const user = await prisma.user.findUnique({
@@ -285,21 +314,11 @@ exports.optionalAuthenticateUser = catchAsync(async (req, res, next) => {
     });
 
     if (user) {
-      req.user = user; // ✅ Set user if found
-      console.log("User authenticated:", user.userId);
-    } else {
-      console.log("User not found - continuing without authentication");
+      req.user = user;
     }
 
-    next(); // ✅ Always continue
+    next();
   } catch (error) {
-    // Token expired or invalid - just continue without authentication
-    if (error.name === "TokenExpiredError") {
-      console.log("Token expired - continuing without authentication");
-    } else {
-      console.log("Token validation error - continuing without authentication:", error.message);
-    }
-    next(); // ✅ Always continue
+    next();
   }
 });
-

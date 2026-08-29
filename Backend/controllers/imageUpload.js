@@ -2,6 +2,7 @@ const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const path = require("path");
 const dotenv = require("dotenv");
 const catchAsync = require("../utils/catchAsync");
+const { sanitizeFolder } = require("../utils/upload");
 
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
@@ -15,10 +16,7 @@ const s3 = new S3Client({
 
 const uploadImage = catchAsync(async (req, res) => {
     const file = req.file;
-    const { folder } = req.body;
-
-    console.log("File received:", file);
-    console.log("Folder received:", folder);
+    const folder = sanitizeFolder(req.body?.folder);
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'application/pdf', 'image/webp'];
     if (!file || !allowedMimeTypes.includes(file.mimetype)) {
         return res.status(400).json({
@@ -45,10 +43,7 @@ const uploadImage = catchAsync(async (req, res) => {
 
 const uploadMultipleImages = catchAsync(async (req, res) => {
     const files = req.files;
-    const { folder } = req.body;
-
-    console.log("Files received:", files);
-    console.log("Folder received:", folder);
+    const folder = sanitizeFolder(req.body?.folder);
 
     if (!files || files.length === 0) {
         return res.status(400).json({

@@ -40,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
           await SharedPreferencesHelper.getInstance();
       String? token = prefs.getString("ApiToken");
 
-      debugPrint("TOKEN  $token");
+      debugPrint("Token present: ${(token ?? '').isNotEmpty}");
 
       if ((token ?? '').isNotEmpty) {
         final controller = Provider.of<KitchenRegistrationController>(

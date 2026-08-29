@@ -23,6 +23,7 @@ const ForgotPassword: React.FC = () => {
 
 
   const [email, setEmail] = useState<string>("");
+  const [resetToken, setResetToken] = useState<string>("");
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch<AppDispatch>();
 
@@ -80,6 +81,7 @@ const ForgotPassword: React.FC = () => {
       const resultAction = await dispatch(verifyOTPThunk({ email: em, otp }));
 
       if (verifyOTPThunk.fulfilled.match(resultAction)) {
+        setResetToken(resultAction.payload.resetToken || "");
         toast({
           title: "Success",
           description: resultAction.payload.message,
@@ -116,7 +118,7 @@ const ForgotPassword: React.FC = () => {
 
     try {
       const resultAction = await dispatch(
-        resetPasswordThunk({ email: em, newPassword: password, confirmPassword })
+        resetPasswordThunk({ email: em, newPassword: password, confirmPassword, resetToken })
       );
 
       if (resetPasswordThunk.fulfilled.match(resultAction)) {

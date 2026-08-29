@@ -14,3 +14,21 @@ logs/
 
 # Optional
 .vscode/
+
+# Firebase service account keys
+*firebase*adminsdk*.json
+
+
+# Ignore folders
+.agent/
+.gemini/
+docs/
+
+# Node modules (IMPORTANT)
+node_modules/
+
+# Logs
+logs/
+
+# Optional
+.vscode/

@@ -11,6 +11,7 @@ export interface ResetPayload {
   email: string;
   newPassword: string;
   confirmPassword: string;
+  resetToken: string;
 }
 
 export interface Permission {

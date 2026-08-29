@@ -33,7 +33,7 @@ class AuthController extends ChangeNotifier {
       };
 
       debugPrint("📤 Login URL: $url");
-      debugPrint("📤 Payload: $payload");
+      debugPrint("📤 Login email: ${email.text}");
 
       final res = await ApiService().postRequest(url, payload);
 
@@ -85,7 +85,6 @@ class AuthController extends ChangeNotifier {
       final payload = {"email": email};
 
       debugPrint("📤 Send OTP URL: $url");
-      debugPrint("📤 Payload: $payload");
 
       final res = await ApiService().postRequest(url, payload);
 
@@ -121,7 +120,6 @@ class AuthController extends ChangeNotifier {
       final payload = {"email": email, "otp": otp};
 
       debugPrint("📤 Verify OTP URL: $url");
-      debugPrint("📤 Payload: $payload");
 
       final res = await ApiService().postRequest(url, payload);
 
@@ -129,7 +127,7 @@ class AuthController extends ChangeNotifier {
 
       if (res != null && (res['status'] == 1 || res['Status'] == 1)) {
         customToast(message: res['message'] ?? "OTP verified successfully");
-        return {"success": true};
+        return {"success": true, "resetToken": res['resetToken']};
       } else {
         customToast(message: res?['message'] ?? "Invalid OTP");
         return {"success": false};
@@ -147,17 +145,21 @@ class AuthController extends ChangeNotifier {
   // Forgot Password - Step 3: Reset Password
   Future<Map<String, dynamic>?> resetPassword(
     String email,
-    String newPassword,
-  ) async {
+    String newPassword, {
+    String? resetToken,
+  }) async {
     try {
       EasyLoading.show();
       notifyListeners();
 
       final url = '${Api.baseUrl}${AppUrls.resetPassword}';
-      final payload = {"email": email, "newPassword": newPassword};
+      final payload = {
+        "email": email,
+        "newPassword": newPassword,
+        "resetToken": resetToken,
+      };
 
       debugPrint("📤 Reset Password URL: $url");
-      debugPrint("📤 Payload: $payload");
 
       final res = await ApiService().postRequest(url, payload);
 
@@ -193,7 +195,6 @@ class AuthController extends ChangeNotifier {
       final payload = {"oldPassword": oldPassword, "newPassword": newPassword};
 
       debugPrint("📤 Reset Old Password URL: $url");
-      debugPrint("📤 Payload: $payload");
 
       final res = await ApiService().postRequest(url, payload);
 

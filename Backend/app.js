@@ -10,6 +10,7 @@ const vendorRoutes = require('./routes/vendotRoute')
 const userRoutes = require('./routes/userRoute')
 const stripeRoutes = require('./routes/stripeRoute')
 const helmet = require("helmet");
+const { corsOriginDelegate } = require("./utils/publicConfig");
 module.exports = () => {  // removed io parameter
   const app = express();
 
@@ -18,16 +19,21 @@ module.exports = () => {  // removed io parameter
   const limiter = rateLimit({
     max: 200,
     windowMs: 1 * 60 * 1000,
-    message: async (req, res) => {
-      return res.status(400).json({
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      return res.status(429).json({
         status: 0,
         message: "You're clicking too quickly. Please wait a few seconds and try again.",
       });
     },
   });
 
-  app.use(cors());
-  app.use(morgan("dev"));
+  app.use(cors({
+    origin: corsOriginDelegate(),
+    credentials: true,
+  }));
+  app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
   app.use(helmet());
 
   // ⚠️ CRITICAL: Stripe webhook needs raw body for signature verification
@@ -82,7 +88,6 @@ module.exports = () => {  // removed io parameter
       status: 1,
       message: "ResQBox API is healthy",
       timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV
     });
   });
 

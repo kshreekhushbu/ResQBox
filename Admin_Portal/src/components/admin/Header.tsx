@@ -26,6 +26,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/store/store";
 import { fetchAdminAlerts, markAlertLocally } from "@/features/restarents/kitchensSlice";
 import { logout } from "@/features/auth/authSlice";
+import { logoutUser } from "@/features/auth/authService";
+import { disconnectSocket } from "@/services/socket";
 import { AlertsDrawer } from "@/features/restarents/components/AlertsDrawer";
 
 interface HeaderProps {
@@ -90,7 +92,13 @@ export function Header({
   }, [user]);
 
   // ... (inside component)
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch {
+      // Continue local logout even if the server call fails
+    }
+    disconnectSocket();
     dispatch(logout());
     navigate("/", { replace: true });
   };

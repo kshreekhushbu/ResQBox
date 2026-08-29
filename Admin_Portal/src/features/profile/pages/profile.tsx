@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Key, Loader2, Eye, EyeOff, Save } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/store/store";
-import { resetPasswordThunk } from "@/features/auth/authSlice";
+import { changePassword } from "@/features/auth/authService";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -22,16 +20,15 @@ interface StoredUser {
 }
 
 interface ResetFormData {
+  oldPassword: string;
   password: string;
   confirmPassword: string;
 }
 
 const Profile: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { loading } = useSelector((state: RootState) => state.auth);
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, watch, reset } = useForm<ResetFormData>();
@@ -83,13 +80,10 @@ const Profile: React.FC = () => {
   const onSubmit = async (data: ResetFormData) => {
     try {
       setIsResetting(true);
-      await dispatch(
-        resetPasswordThunk({
-          email: user.emailId || "",
-          newPassword: data.password,
-          confirmPassword: data.confirmPassword,
-        })
-      ).unwrap();
+      await changePassword({
+        oldPassword: data.oldPassword,
+        newPassword: data.password,
+      });
 
       toast({
         title: "Success",
@@ -164,6 +158,32 @@ const Profile: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="oldPassword">
+                    Current Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="oldPassword"
+                      type={showOldPassword ? "text" : "password"}
+                      placeholder="Enter current password"
+                      {...register("oldPassword", {
+                        required: "Current password is required",
+                      })}
+                      className={cn("pr-10", errors.oldPassword && "border-destructive focus-visible:ring-destructive")}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOldPassword(!showOldPassword)}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                    >
+                      {showOldPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.oldPassword && (
+                    <p className="text-xs text-destructive">{errors.oldPassword.message}</p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">
                     New Password <span className="text-destructive">*</span>
@@ -246,7 +266,7 @@ const Profile: React.FC = () => {
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  disabled={isResetting || loading}
+                  disabled={isResetting}
                   className="bg-primary hover:bg-primary/90 min-w-[140px]"
                 >
                   {isResetting ? (

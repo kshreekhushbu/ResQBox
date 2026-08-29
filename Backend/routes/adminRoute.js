@@ -3,155 +3,122 @@ const auth = require("../utils/authentication");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 const timezoneController = require("../controllers/timezoneController");
+const { upload } = require("../utils/upload");
+const { authLimiter, uploadLimiter } = require("../utils/authLimiter");
+const uploadImage = require("../controllers/imageUpload");
 
-const multer = require("multer");
-const uploadImage = require("../controllers/imageUpload"); // Import Controller
+router.post("/adminLogin", authLimiter, adminController.adminLogin)
+router.post("/adminSignUp", authLimiter, adminController.adminSignUp)
 
-const upload = multer({ storage: multer.memoryStorage() });
-
-router.post("/upload", upload.single("file"), uploadImage.uploadImage);
-router.post("/uploads", upload.array("files"), uploadImage.uploadMultipleImages);
-
-router.post('/adminSignUp', adminController.adminSignUp)
-router.post('/adminLogin', adminController.adminLogin)
-
-// 🔐 Forgot Password Routes (Public - No Auth Required)
-router.post('/sendForgotPasswordOTP', adminController.sendForgotPasswordOTP)
-router.post('/verifyForgotPasswordOTP', adminController.verifyForgotPasswordOTP)
-router.post('/resetPassword', adminController.resetPassword)
-router.put('/addStripeAccountToKitchen/:kitchenId', adminController.addStripeAccountToKitchen)
+router.post("/sendForgotPasswordOTP", authLimiter, adminController.sendForgotPasswordOTP)
+router.post("/verifyForgotPasswordOTP", authLimiter, adminController.verifyForgotPasswordOTP)
+router.post("/resetPassword", authLimiter, adminController.resetPassword)
 
 router.use(auth.authenticateAdmin)
-router.post('/resetOldPassword', adminController.resetOldPassword)
-router.get('/getDashboard', adminController.getDashboard)
 
-router.post('/createAdminUser', adminController.createAdminUser)
-router.get('/getAdminUsers', adminController.getSubAdmins)
-router.put('/updateAdminUser/:adminId', adminController.updateSubAdmin)
-router.get('/getAdminUserById/:id', adminController.getAdminUserById)
-router.delete('/deleteAdminUser/:adminId', adminController.deleteSubAdmin)
+router.post("/upload", uploadLimiter, upload.single("file"), uploadImage.uploadImage);
+router.post("/uploads", uploadLimiter, upload.array("files"), uploadImage.uploadMultipleImages);
 
-router.post('/createRole', adminController.createRole)
-router.get('/getRoles', adminController.getAllRoles)
-router.get('/getRoleById/:id', adminController.getRoleById)
-router.put('/updateRole/:id', adminController.updateRolePermissions)
+router.post("/logout", adminController.adminLogout)
+router.post("/resetOldPassword", adminController.resetOldPassword)
+router.get("/getDashboard", auth.requirePermission("dashboard", "read"), adminController.getDashboard)
 
-router.post('/addBanner', adminController.addBanner)
-router.put('/updateBanner/:bannerId', adminController.updateBanner)
-router.get('/getBanners', adminController.getBanners)
-router.get('/getBannerById/:bannerId', adminController.getBannerById)
-router.delete('/deleteBanner/:bannerId', adminController.deleteBanner)
+router.post("/createAdminUser", auth.requirePermission("teams", "write"), adminController.createAdminUser)
+router.get("/getAdminUsers", auth.requirePermission("teams", "read"), adminController.getSubAdmins)
+router.put("/updateAdminUser/:adminId", auth.requirePermission("teams", "edit"), adminController.updateSubAdmin)
+router.get("/getAdminUserById/:id", auth.requirePermission("teams", "read"), adminController.getAdminUserById)
+router.delete("/deleteAdminUser/:adminId", auth.requirePermission("teams", "delete"), adminController.deleteSubAdmin)
 
-router.post('/addCategory', adminController.addCategory)
-router.put('/updateCategory/:categoryId', adminController.updateCategory)
-router.get('/getCategories', adminController.getCategories)
-router.get('/getCategoryById/:categoryId', adminController.getCategoryById)
-router.delete('/deleteCategory/:categoryId', adminController.deleteCategory)
+router.post("/createRole", auth.requirePermission("roles", "write"), adminController.createRole)
+router.get("/getRoles", auth.requirePermission("roles", "read"), adminController.getAllRoles)
+router.get("/getRoleById/:id", auth.requirePermission("roles", "read"), adminController.getRoleById)
+router.put("/updateRole/:id", auth.requirePermission("roles", "edit"), adminController.updateRolePermissions)
 
-// Timezone Management
-router.post('/addTimezone', timezoneController.addTimezone)
-router.post('/bulkAddTimezones', timezoneController.bulkAddTimezones)
-router.get('/getAllTimezones', timezoneController.getAllTimezones)
-router.get('/getTimezoneById/:id', timezoneController.getTimezoneById)
-router.put('/updateTimezone/:id', timezoneController.updateTimezone)
-router.delete('/deleteTimezone/:id', timezoneController.deleteTimezone)
+router.post("/addBanner", auth.requirePermission("banners", "write"), adminController.addBanner)
+router.put("/updateBanner/:bannerId", auth.requirePermission("banners", "edit"), adminController.updateBanner)
+router.get("/getBanners", auth.requirePermission("banners", "read"), adminController.getBanners)
+router.get("/getBannerById/:bannerId", auth.requirePermission("banners", "read"), adminController.getBannerById)
+router.delete("/deleteBanner/:bannerId", auth.requirePermission("banners", "delete"), adminController.deleteBanner)
 
+router.post("/addCategory", auth.requirePermission("categories", "write"), adminController.addCategory)
+router.put("/updateCategory/:categoryId", auth.requirePermission("categories", "edit"), adminController.updateCategory)
+router.get("/getCategories", auth.requirePermission("categories", "read"), adminController.getCategories)
+router.get("/getCategoryById/:categoryId", auth.requirePermission("categories", "read"), adminController.getCategoryById)
+router.delete("/deleteCategory/:categoryId", auth.requirePermission("categories", "delete"), adminController.deleteCategory)
 
-router.post('/addFoodType', adminController.addFoodType)
-router.put('/updateFoodType/:foodTypeId', adminController.updateFoodType)
-router.get('/getFoodTypes', adminController.getFoodTypes)
+router.post("/addTimezone", timezoneController.addTimezone)
+router.post("/bulkAddTimezones", timezoneController.bulkAddTimezones)
+router.get("/getAllTimezones", timezoneController.getAllTimezones)
+router.get("/getTimezoneById/:id", timezoneController.getTimezoneById)
+router.put("/updateTimezone/:id", timezoneController.updateTimezone)
+router.delete("/deleteTimezone/:id", timezoneController.deleteTimezone)
 
-router.get('/getFoodTypeById/:foodTypeId', adminController.getFoodTypeById)
-router.delete('/deleteFoodType/:foodTypeId', adminController.deleteFoodType)
+router.post("/addFoodType", auth.requirePermission("categories", "write"), adminController.addFoodType)
+router.put("/updateFoodType/:foodTypeId", auth.requirePermission("categories", "edit"), adminController.updateFoodType)
+router.get("/getFoodTypes", auth.requirePermission("categories", "read"), adminController.getFoodTypes)
+router.get("/getFoodTypeById/:foodTypeId", auth.requirePermission("categories", "read"), adminController.getFoodTypeById)
+router.delete("/deleteFoodType/:foodTypeId", auth.requirePermission("categories", "delete"), adminController.deleteFoodType)
 
+router.post("/addCuisine", auth.requirePermission("categories", "write"), adminController.addCuisine)
+router.put("/updateCuisine/:cuisineId", auth.requirePermission("categories", "edit"), adminController.updateCuisine)
+router.get("/getCuisines", auth.requirePermission("categories", "read"), adminController.getCuisines)
+router.get("/getCuisineById/:cuisineId", auth.requirePermission("categories", "read"), adminController.getCuisineById)
+router.delete("/deleteCuisine/:cuisineId", auth.requirePermission("categories", "delete"), adminController.deleteCuisine)
 
-router.post('/addCuisine', adminController.addCuisine)
-router.put('/updateCuisine/:cuisineId', adminController.updateCuisine)
-router.get('/getCuisines', adminController.getCuisines)
-router.get('/getCuisineById/:cuisineId', adminController.getCuisineById)
-router.delete('/deleteCuisine/:cuisineId', adminController.deleteCuisine)
+const bulkUploadController = require("../controllers/bulkUpload");
+router.post("/bulkUploadCuisines", auth.requirePermission("categories", "write"), upload.single("file"), bulkUploadController.bulkUploadCuisines)
+router.post("/bulkUploadFoodCategories", auth.requirePermission("categories", "write"), upload.single("file"), bulkUploadController.bulkUploadFoodCategories)
 
-// Bulk upload cuisines from Excel
-const bulkUploadController = require('../controllers/bulkUpload');
-router.post('/bulkUploadCuisines', upload.single('file'), bulkUploadController.bulkUploadCuisines)
+router.get("/getKitchenDetailsById/:kitchenId", auth.requirePermission("restaurants", "read"), adminController.getKitchenDetailsById)
+router.get("/getAllKitchens", auth.requirePermission("restaurants", "read"), adminController.getAllKitchens)
+router.put("/updateComplianceStatus/:kitchenId", auth.requirePermission("restaurants", "edit"), adminController.updateComplianceStatus)
+router.put("/updateKitchenStatus/:kitchenId", auth.requirePermission("restaurants", "edit"), adminController.updateKitchenStatus)
+router.put("/updateKitchenStripeAccountId/:kitchenId", auth.requirePermission("restaurants", "edit"), adminController.addStripeAccountToKitchen)
+router.put("/addStripeAccountToKitchen/:kitchenId", auth.requirePermission("restaurants", "edit"), adminController.addStripeAccountToKitchen)
 
-// Bulk upload food categories from Excel
-router.post('/bulkUploadFoodCategories', upload.single('file'), bulkUploadController.bulkUploadFoodCategories)
+router.get("/getConfig", auth.requirePermission("config", "read"), adminController.getConfig)
+router.put("/updateConfig", auth.requirePermission("config", "edit"), adminController.updateConfig)
 
-router.get('/getKitchenDetailsById/:kitchenId', adminController.getKitchenDetailsById)
-router.get('/getAllKitchens', adminController.getAllKitchens)
-router.put('/updateComplianceStatus/:kitchenId', adminController.updateComplianceStatus)
-router.put('/updateKitchenStatus/:kitchenId', adminController.updateKitchenStatus)
-router.put('/updateKitchenStripeAccountId/:kitchenId', adminController.addStripeAccountToKitchen)
+router.get("/getAllUserDetails", auth.requirePermission("users", "read"), adminController.getAllUserDetails)
+router.get("/adminGetAllOrders", auth.requirePermission("orders", "read"), adminController.adminGetAllOrders)
+router.get("/getOrderDetails/:orderUid", auth.requirePermission("orders", "read"), adminController.getOrderDetails)
 
-router.get('/getConfig', adminController.getConfig)
-router.put('/updateConfig', adminController.updateConfig)
+router.get("/getPagePermissions", adminController.getPagePermissions)
 
-router.get('/getAllUserDetails', adminController.getAllUserDetails)
-router.get('/adminGetAllOrders', adminController.adminGetAllOrders)
+router.get("/getCurrentPayouts", auth.requirePermission("payouts", "read"), adminController.getCurrentPayouts)
+router.post("/payKitchen", auth.requirePermission("payouts", "write"), adminController.payKitchen)
+router.get("/getInvoices", auth.requirePermission("invoices", "read"), adminController.getInvoices)
 
-router.get('/getOrderDetails/:orderUid', adminController.getOrderDetails)
+router.get("/adminGetSupportChats", auth.requirePermission("support requests", "read"), adminController.adminGetSupportChats)
+router.get("/getChatMessages/:chatRoomId", auth.requirePermission("support requests", "read"), adminController.getChatMessages)
+router.post("/sendAdminSupportMessage", auth.requirePermission("support requests", "write"), adminController.sendAdminSupportMessage)
+router.put("/closeSupportChat/:roomId", auth.requirePermission("support requests", "edit"), adminController.closeSupportChat)
 
-router.get('/getPagePermissions', adminController.getPagePermissions)
-// router.get('/getWeeklyPayouts', adminController.getWeeklyPayouts)
+router.get("/getOrdersByKitchenId/:kitchenId", auth.requirePermission("orders", "read"), adminController.getOrdersByKitchenId)
 
-router.get('/getCurrentPayouts', adminController.getCurrentPayouts)
+router.post("/sendAdminNotification", auth.requirePermission("notifications", "write"), adminController.sendAdminNotification)
+router.get("/getAdminNotifications", auth.requirePermission("notifications", "read"), adminController.getAdminNotifications)
 
-router.post('/payKitchen', adminController.payKitchen)
+router.get("/getAdminAlerts", adminController.getAdminAlerts)
+router.put("/markAlertAsViewed/:alertId", adminController.markAlertAsViewed)
 
-router.get('/getInvoices', adminController.getInvoices)
+router.post("/generateMonthlyInvoices", auth.requirePermission("invoices", "write"), adminController.manualGenerateMonthlyInvoices)
+router.get("/getMonthlyInvoices", auth.requirePermission("invoices", "read"), adminController.getMonthlyInvoices)
+router.get("/getMonthlyInvoiceById/:invoiceId", auth.requirePermission("invoices", "read"), adminController.getMonthlyInvoiceById)
 
-router.get('/adminGetSupportChats', adminController.adminGetSupportChats)
+router.get("/getStripeLogs", auth.requirePermission("invoices", "read"), adminController.getStripeLogs)
 
-router.get('/getChatMessages/:chatRoomId', adminController.getChatMessages)
+router.put("/updateUserStatus/:userId", auth.requirePermission("users", "edit"), adminController.updateUserStatus)
+router.post("/processScheduledDeletions", auth.requirePermission("users", "delete"), adminController.processScheduledDeletions)
 
-router.post('/sendAdminSupportMessage', adminController.sendAdminSupportMessage)
+router.post("/addMenuType", auth.requirePermission("categories", "write"), adminController.addMenuType)
+router.put("/updateMenuType/:menuTypeId", auth.requirePermission("categories", "edit"), adminController.updateMenuType)
+router.get("/getMenuTypes", auth.requirePermission("categories", "read"), adminController.getMenuTypes)
+router.get("/getMenuTypeById/:menuTypeId", auth.requirePermission("categories", "read"), adminController.getMenuTypeById)
+router.delete("/deleteMenuType/:menuTypeId", auth.requirePermission("categories", "delete"), adminController.deleteMenuType)
 
-router.put('/closeSupportChat/:roomId', adminController.closeSupportChat)
-
-router.get('/getOrdersByKitchenId/:kitchenId', adminController.getOrdersByKitchenId)
-
-router.post('/sendAdminNotification', adminController.sendAdminNotification)
-
-router.get('/getAdminNotifications', adminController.getAdminNotifications)
-
-// Admin Alerts routes
-router.get('/getAdminAlerts', adminController.getAdminAlerts)
-
-router.put('/markAlertAsViewed/:alertId', adminController.markAlertAsViewed)
-
-// Monthly invoice generation and management
-router.post('/generateMonthlyInvoices', adminController.manualGenerateMonthlyInvoices)
-router.get('/getMonthlyInvoices', adminController.getMonthlyInvoices)
-router.get('/getMonthlyInvoiceById/:invoiceId', adminController.getMonthlyInvoiceById)
-
-// Stripe payout schedule management
-
-router.put('/addStripeAccountToKitchen/:kitchenId', adminController.addStripeAccountToKitchen);
-
-router.put('/closeSupportChat/:roomId', adminController.closeSupportChat);
-
-// 💳 Stripe Webhook Logs
-router.get('/getStripeLogs', adminController.getStripeLogs)
-
-// 👤 User Status & Account Requests
-router.put('/updateUserStatus/:userId', adminController.updateUserStatus)
-router.post('/processScheduledDeletions', adminController.processScheduledDeletions)
-
-
-// Menu Type Routes
-router.post('/addMenuType', adminController.addMenuType)
-router.put('/updateMenuType/:menuTypeId', adminController.updateMenuType)
-router.get('/getMenuTypes', adminController.getMenuTypes)
-router.get('/getMenuTypeById/:menuTypeId', adminController.getMenuTypeById)
-router.delete('/deleteMenuType/:menuTypeId', adminController.deleteMenuType)
-
-// ========================================
-// 🔍 RESTAURANT AUDIT TRAIL ROUTES
-// ========================================
-router.get('/audit-logs', adminController.getAllAuditLogs)
-router.get('/audit-logs/kitchen/:kitchenId', adminController.getKitchenAuditLogs)
-router.get('/audit-logs/kitchen/:kitchenId/stats', adminController.getKitchenAuditStats)
-
+router.get("/audit-logs", auth.requirePermission("restaurants", "read"), adminController.getAllAuditLogs)
+router.get("/audit-logs/kitchen/:kitchenId", auth.requirePermission("restaurants", "read"), adminController.getKitchenAuditLogs)
+router.get("/audit-logs/kitchen/:kitchenId/stats", auth.requirePermission("restaurants", "read"), adminController.getKitchenAuditStats)
 
 module.exports = router;
