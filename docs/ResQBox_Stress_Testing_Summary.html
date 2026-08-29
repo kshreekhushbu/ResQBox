@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ResQBox Stress / Load Testing — Short Summary</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 840px; margin: 40px auto; padding: 0 24px; color: #111; line-height: 1.45; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 16px; margin-top: 28px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    code { font-size: 12px; }
+    .meta { color: #555; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>ResQBox Stress / Load Testing — Short Summary</h1>
+  <p class="meta">
+    Date: 07 July 2026 (source report)<br />
+    Scope: Backend API, Socket.IO, checkout, admin portal<br />
+    Method: Architecture review + projected load scenarios<br />
+    Live load test: Not run (no staging environment)
+  </p>
+
+  <h2>Summary</h2>
+  <p>ResQBox is a <strong>single Node.js API</strong> with PostgreSQL, in-memory sockets, and in-memory order timers. It is unlikely to hold up under flash-sale or multi-instance load. The highest risk is <strong>inventory overselling</strong> when many users buy the same box at once.</p>
+
+  <h2>Projected load results</h2>
+  <table>
+    <tr><th>ID</th><th>Scenario</th><th>Load</th><th>Projected result</th></tr>
+    <tr><td>LT-001</td><td>Concurrent browse</td><td>500 users</td><td>Likely fail around 200+ (no cache, one process)</td></tr>
+    <tr><td>LT-002</td><td>Concurrent checkout of the same item (qty 10)</td><td>50 users</td><td><strong>Will fail</strong> — more than 10 orders can succeed</td></tr>
+    <tr><td>LT-003</td><td>Vendors accepting orders at once</td><td>10 vendors</td><td>Likely pass</td></tr>
+    <tr><td>LT-004</td><td>Stripe webhook burst</td><td>100 events / 10s</td><td>Unknown — idempotency not fully proven</td></tr>
+    <tr><td>LT-005</td><td>Socket connections</td><td>1000 clients</td><td>Likely fail around 500+</td></tr>
+    <tr><td>LT-006</td><td>Admin portal concurrent use</td><td>20 admins</td><td>Likely pass; API rate limit may throttle</td></tr>
+    <tr><td>LT-007</td><td>Sustained load</td><td>100 users / 30 min</td><td>Unknown — in-memory timers may degrade</td></tr>
+  </table>
+
+  <h2>Main constraints</h2>
+  <table>
+    <tr><th>ID</th><th>Issue</th><th>Why it matters</th></tr>
+    <tr><td>SC-001</td><td>Single Node process</td><td>HTTP, WebSockets, and cron all share one process</td></tr>
+    <tr><td>SC-002</td><td>In-memory order timers</td><td>Lost on restart; no durable job queue</td></tr>
+    <tr><td>SC-003</td><td>Untuned DB pool</td><td>Prisma pool can exhaust at 100+ concurrent users</td></tr>
+    <tr><td>SC-004</td><td>Non-atomic inventory</td><td>Race conditions on popular / flash-sale items</td></tr>
+    <tr><td>SC-006</td><td>No API response cache</td><td>Every browse hit goes to the database</td></tr>
+    <tr><td>SC-008</td><td>No containers / autoscaling</td><td>Cannot add instances for traffic spikes</td></tr>
+  </table>
+
+  <h2>Fix first</h2>
+  <ol>
+    <li>Make inventory updates atomic (or reserve stock with a TTL)</li>
+    <li>Add Redis for Socket.IO, caching, and a persistent job queue</li>
+    <li>Tune Prisma / PgBouncer connection pooling</li>
+    <li>Put multiple API instances behind a load balancer</li>
+    <li>Run LT-001, LT-002, and LT-005 on staging before the next peak event</li>
+  </ol>
+
+  <p>This is a projected stress assessment, not a measured load-test result.</p>
+</body>
+</html>
