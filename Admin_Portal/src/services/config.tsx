@@ -25,7 +25,8 @@ export const addResponseInterceptor = (
         ((error?.response &&
           error?.response.status === 401 &&
           ((error?.response.data as any)?.message === "Token expired" ||
-            (error?.response.data as any)?.message === "Invalid token")) ||
+            (error?.response.data as any)?.message === "Invalid token" ||
+            (error?.response.data as any)?.message === "Session expired")) ||
           (error?.response?.data as any)?.message === "Unauthorized Admin User")
       ) {
         let timerInterval: ReturnType<typeof setInterval>;

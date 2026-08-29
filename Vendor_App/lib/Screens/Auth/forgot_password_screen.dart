@@ -25,6 +25,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       TextEditingController();
 
   bool _isOtpVerified = false;
+  String? _resetToken;
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
   bool _hasCapital = false;
@@ -174,6 +175,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Navigator.pop(context); // Close bottom sheet
                     setState(() {
                       _isOtpVerified = true;
+                      _resetToken = result['resetToken'] as String?;
                     });
                   }
                 },
@@ -209,6 +211,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final result = await authProvider.resetPassword(
         _emailController.text.trim(),
         _newPasswordController.text,
+        resetToken: _resetToken,
       );
 
       if (result != null && result['success'] == true && mounted) {

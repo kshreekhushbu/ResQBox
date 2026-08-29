@@ -9,6 +9,9 @@ const { getIO } = require("../utils/socket");
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY_VENDORS);
 const auditLogger = require('../utils/auditLogger');
+const { generateOtp, isOtpFresh } = require("../utils/otp");
+const { issueResetToken, verifyResetToken } = require("../utils/passwordReset");
+const { filterPublicConfig } = require("../utils/publicConfig");
 
 /**
  * Parse expireDate that may arrive as DD-MM-YYYY (from app) or ISO/YYYY-MM-DD.
@@ -167,7 +170,7 @@ exports.loginKitchen = catchAsync(async (req, res) => {
 
     // ⭐ Token remains SAME for team member (kitchenId only)
     const token = jwt.sign(
-        { id: member.kitchenId, role: "KITCHEN" },
+        { id: member.kitchenId, role: "KITCHEN", teamMemberId: member.id },
         process.env.JWT_SECRET_KEY,
         { expiresIn: "10d" }
     );
@@ -236,6 +239,13 @@ exports.getAbnDetails = catchAsync(async (req, res) => {
         return res.status(400).json({
             status: 0,
             message: "ABN is required"
+        });
+    }
+
+    if (!/^\d{11}$/.test(String(abn))) {
+        return res.status(400).json({
+            status: 0,
+            message: "ABN must be 11 digits"
         });
     }
 
@@ -2040,13 +2050,13 @@ exports.updateKitchen = catchAsync(async (req, res) => {
 exports.getConfig = catchAsync(async (req, res) => {
     try {
         console.log("Fetching all configs...");
-        const config = await prisma.config.findMany({
+        const config = filterPublicConfig(await prisma.config.findMany({
             select: {
                 configId: true,
                 configKey: true,
                 configValue: true,
             },
-        });
+        }));
         console.log("Configs found:", config);
 
         // Force no caching
@@ -2203,11 +2213,23 @@ exports.acceptOrder = catchAsync(async (req, res) => {
     const { orderId } = req.params;
     const { dateTime } = req.body;
 
-    // Convert dateTime string to Date object if provided
     const acceptedAtTime = dateTime ? new Date(dateTime) : new Date();
-    console.log("Kitchen trying to accept order:", kitchenId, orderId, "acceptedAt:", acceptedAtTime);
 
-    // Get payment info
+    const orderRecord = await prisma.order.findUnique({
+        where: { orderId: Number(orderId) }
+    });
+
+    if (!orderRecord) {
+        return res.status(404).json({ status: 0, message: "Order not found" });
+    }
+
+    if (orderRecord.kitchenId !== kitchenId) {
+        return res.status(403).json({
+            status: 0,
+            message: "This order does NOT belong to your kitchen"
+        });
+    }
+
     const payment = await prisma.orderPayment.findFirst({
         where: { orderId: Number(orderId) }
     });
@@ -2253,21 +2275,6 @@ exports.acceptOrder = catchAsync(async (req, res) => {
     });
     console.log("✅ [ORDER] Order status updated to ACCEPTED and PAID");
 
-    // Fetch the order & verify it belongs to kitchen
-    const orderRecord = await prisma.order.findUnique({
-        where: { orderId: Number(orderId) }
-    });
-
-    if (!orderRecord)
-        return res.status(404).json({ status: 0, message: "Order not found" });
-
-    if (orderRecord.kitchenId !== kitchenId)
-        return res.status(403).json({
-            status: 0,
-            message: "This order does NOT belong to your kitchen ❌"
-        });
-
-    // Now update safely
     const updatedOrder = await prisma.order.update({
         where: { orderId: Number(orderId) },
         data: {
@@ -2360,7 +2367,22 @@ exports.rejectOrder = catchAsync(async (req, res) => {
     const { kitchenId } = req.kitchen;
     const { orderId } = req.params;
     const { dateTime } = req.body;
-    console.log("Date Time:", dateTime);
+
+    const existingOrder = await prisma.order.findUnique({
+        where: { orderId: Number(orderId) }
+    });
+
+    if (!existingOrder) {
+        return res.status(404).json({ status: 0, message: "Order not found" });
+    }
+
+    if (existingOrder.kitchenId !== kitchenId) {
+        return res.status(403).json({
+            status: 0,
+            message: "This order does NOT belong to your kitchen"
+        });
+    }
+
     const payment = await prisma.orderPayment.findFirst({
         where: { orderId: Number(orderId) }
     });
@@ -3258,11 +3280,7 @@ exports.sendForgotPasswordOTP = catchAsync(async (req, res) => {
         });
     }
 
-    // Generate 6-digit OTP
-    let otp = '123456'; // Fixed OTP for development
-    if (process.env.NODE_ENV === 'production') {
-        otp = Math.floor(100000 + Math.random() * 900000).toString(); // Random 6-digit OTP in production
-    }
+    let otp = generateOtp();
 
     // Store OTP in database
     if (kitchen) {
@@ -3333,31 +3351,29 @@ exports.verifyForgotPasswordOTP = catchAsync(async (req, res) => {
         });
     }
 
-    // Verify OTP matches
     if (kitchen) {
-        if (kitchen.otp !== otp || kitchen.otpStatus !== 1) {
+        if (kitchen.otp !== otp || kitchen.otpStatus !== 1 || !isOtpFresh(kitchen.updatedAt)) {
             return res.status(400).json({
                 status: 0,
                 message: "Invalid or expired OTP"
             });
         }
 
-        // Mark OTP as verified
         await prisma.kitchen.update({
             where: { kitchenId: kitchen.kitchenId },
             data: {
-                otpStatus: 0
+                otpStatus: 2,
+                otp: null
             }
         });
     } else if (teamMember) {
-        if (teamMember.otp !== otp || teamMember.otpStatus !== 1) {
+        if (teamMember.otp !== otp || teamMember.otpStatus !== 1 || !isOtpFresh(teamMember.updatedAt)) {
             return res.status(400).json({
                 status: 0,
                 message: "Invalid or expired OTP"
             });
         }
 
-        // Mark OTP as verified
         await prisma.teamMember.update({
             where: { id: teamMember.id },
             data: {
@@ -3366,16 +3382,19 @@ exports.verifyForgotPasswordOTP = catchAsync(async (req, res) => {
         });
     }
 
+    const resetToken = issueResetToken({ email, audience: "vendor" });
+
     return res.status(200).json({
         status: 1,
         message: "OTP verified successfully",
-        email
+        email,
+        resetToken
     });
 });
 
 // 3️⃣ Reset Password
 exports.resetPassword = catchAsync(async (req, res) => {
-    const { email, newPassword } = req.body;
+    const { email, newPassword, resetToken } = req.body;
 
     if (!email || !newPassword) {
         return res.status(400).json({
@@ -3384,17 +3403,38 @@ exports.resetPassword = catchAsync(async (req, res) => {
         });
     }
 
-    // Hash new password
+    let decoded;
+    try {
+        decoded = verifyResetToken(resetToken, "vendor");
+    } catch (error) {
+        return res.status(error.statusCode || 400).json({
+            status: 0,
+            message: error.message || "Invalid or expired reset token"
+        });
+    }
+
+    if (String(decoded.email).toLowerCase() !== String(email).toLowerCase()) {
+        return res.status(400).json({
+            status: 0,
+            message: "Invalid reset token"
+        });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password for kitchen or team member
     const kitchen = await prisma.kitchen.findFirst({ where: { email } });
     const teamMember = await prisma.teamMember.findFirst({ where: { email } });
 
     if (kitchen) {
+        if (kitchen.otpStatus !== 2) {
+            return res.status(400).json({
+                status: 0,
+                message: "Password reset is not authorized. Please verify OTP again."
+            });
+        }
         await prisma.kitchen.update({
             where: { kitchenId: kitchen.kitchenId },
-            data: { password: hashedPassword }
+            data: { password: hashedPassword, otp: null, otpStatus: 0 }
         });
     } else if (teamMember) {
         await prisma.teamMember.update({

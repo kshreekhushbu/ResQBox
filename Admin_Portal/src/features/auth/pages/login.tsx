@@ -84,7 +84,6 @@ const Login: React.FC = () => {
   }, []);
 
   const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
-    console.log(data);
     try {
       setIsLoading(true);
       const resultAction = await dispatch(login(data));
@@ -102,7 +101,6 @@ const Login: React.FC = () => {
         localStorage.setItem("admindata", JSON.stringify(user));
         localStorage.setItem("AccessItems", JSON.stringify(permissions));
         localStorage.setItem("RoleId", String(roleId));
-        console.log("permissions", permissions);
 
         const AccessItems = permissions || [];
 

@@ -7,6 +7,8 @@ const { noSniff } = require("helmet");
 const { config } = require("dotenv");
 const { json } = require("express");
 const { getIO } = require("../utils/socket");
+const { generateOtp, isOtpFresh } = require("../utils/otp");
+const { filterPublicConfig } = require("../utils/publicConfig");
 
 /**
  * Parse device date string to JavaScript Date object
@@ -101,11 +103,10 @@ exports.verifyOtp = catchAsync(async (req, res) => {
         }
     });
 
-    console.log("record:", record)
-    if (!record) {
+    if (!record || !isOtpFresh(record.updatedAt)) {
         return res.status(400).json({
             status: 0,
-            message: "Invalid OTP"
+            message: "Invalid or expired OTP"
         });
     }
 
@@ -201,10 +202,7 @@ exports.sendSignupOtp = catchAsync(async (req, res) => {
         });
     }
 
-    let otp = '123456';
-    if (process.env.NODE_ENV !== 'development') {
-        otp = Math.floor(100000 + Math.random() * 900000).toString();
-    }
+    let otp = generateOtp();
 
     // Create or update OTP
     await prisma.verifyEmail.upsert({
@@ -272,13 +270,7 @@ exports.sendOtp = catchAsync(async (req, res) => {
         });
     }
 
-    // Generate OTP
-    let otp = '123456';
-
-    // Use default OTP for test account or development mode
-    if (email !== 'sriharsha@mtouchlabs.com' && process.env.NODE_ENV !== 'development') {
-        otp = Math.floor(100000 + Math.random() * 900000).toString();
-    }
+    let otp = generateOtp();
 
     // Create or update OTP
     await prisma.verifyEmail.upsert({
@@ -295,7 +287,7 @@ exports.sendOtp = catchAsync(async (req, res) => {
     });
 
     // Send OTP via email (only in production and not for test account)
-    if (process.env.NODE_ENV === 'production' && email !== 'sriharsha@mtouchlabs.com') {
+    if (process.env.NODE_ENV === 'production') {
         const { sendUserLoginOTP } = require('../utils/emailService');
         const emailResult = await sendUserLoginOTP(email, otp);
 
@@ -304,10 +296,8 @@ exports.sendOtp = catchAsync(async (req, res) => {
         } else {
             console.error(`❌ Failed to send login OTP to ${email}:`, emailResult.error);
         }
-    } else if (email === 'sriharsha@mtouchlabs.com') {
-        console.log(`🔐 [TEST ACCOUNT] OTP for ${email}: ${otp} (Email not sent - test account)`);
     } else {
-        console.log(`🔐 [USER LOGIN] OTP for ${email}: ${otp} (Development mode - email not sent)`);
+        console.log(`🔐 [USER LOGIN] OTP for ${email} generated (Development mode - email not sent)`);
     }
 
     return res.status(200).json({
@@ -333,11 +323,11 @@ exports.signup = catchAsync(async (req, res) => {
     const verifyOtp = await prisma.verifyEmail.findUnique({
         where: { email }
     });
-    if (!verifyOtp || verifyOtp.otp !== otp) {
+    if (!verifyOtp || verifyOtp.otp !== otp || !isOtpFresh(verifyOtp.updatedAt)) {
 
         return res.status(400).json({
             status: 0,
-            message: "Invalid OTP"
+            message: "Invalid or expired OTP"
         });
     }
 
@@ -2098,13 +2088,13 @@ exports.kitchenSearch = catchAsync(async (req, res) => {
 exports.getConfig = catchAsync(async (req, res) => {
     try {
         console.log("Fetching all configs...");
-        const config = await prisma.config.findMany({
+        const config = filterPublicConfig(await prisma.config.findMany({
             select: {
                 configId: true,
                 configKey: true,
                 configValue: true,
             },
-        });
+        }));
         console.log("Configs found:", config);
 
         // Force no caching
@@ -3197,7 +3187,6 @@ exports.stripeWebhook = catchAsync(async (req, res) => {
     console.log("🔍 [DEBUG] Body length:", req.body?.length || 0);
     console.log("🔍 [DEBUG] Signature present?:", !!sig);
     console.log("🔍 [DEBUG] Webhook secret configured?:", !!process.env.STRIPE_WEBHOOK_SECRET);
-    console.log("🔍 [DEBUG] Webhook secret starts with:", process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10));
     console.log("🔍 [DEBUG] Request URL:", req.originalUrl);
     console.log("🔍 [DEBUG] Content-Type:", req.headers["content-type"]);
 
@@ -3222,21 +3211,10 @@ exports.stripeWebhook = catchAsync(async (req, res) => {
     let event;
     try {
         if (isV2) {
-            // 🔥 V2 (Thin) events → Log to DB and skip
-            const body = JSON.parse(req.body.toString());
-            console.log("ℹ️  [WEBHOOK] V2 event received - logging and skipping");
-
-            await prisma.stripeEventLog.create({
-                data: {
-                    eventType: body.type || "v2_unknown",
-                    eventId: body.id,
-                    isV2: true,
-                    status: "SKIPPED_V2",
-                    body: body
-                }
-            }).catch(err => console.error("❌ [DB_LOG_ERROR] V2:", err.message));
-
-            return res.json({ received: true, message: "V2 events logged but not processed" });
+            return res.status(400).json({
+                status: 0,
+                message: "Unsupported webhook event version"
+            });
         } else {
             // 🔐 Snapshot events → MUST verify
             const webhookSecrets = [
@@ -4812,11 +4790,11 @@ exports.deleteAccount = catchAsync(async (req, res) => {
 
 // auth creation 
 
-const { admin, authApp } = require("./firebaseAuth");
+const firebaseAuth = require("./firebaseAuth");
 
 exports.googleLogin = catchAsync(async (req, res) => {
     const { idToken, deviceToken } = req.body;
-    console.log(idToken, deviceToken)
+    console.log("Social login received");
     if (!idToken) {
         return res.status(400).json({
             status: 0,
@@ -4824,7 +4802,7 @@ exports.googleLogin = catchAsync(async (req, res) => {
         });
     }
 
-    const decodedToken = await authApp
+    const decodedToken = await firebaseAuth.authApp
         .auth()
         .verifyIdToken(idToken);
 
@@ -4942,7 +4920,7 @@ exports.googleLogin = catchAsync(async (req, res) => {
 
 exports.appleLogin = catchAsync(async (req, res) => {
     const { idToken, deviceToken } = req.body;
-    console.log(idToken, deviceToken)
+    console.log("Social login received");
     if (!idToken) {
         return res.status(400).json({
             status: 0,
@@ -4951,7 +4929,7 @@ exports.appleLogin = catchAsync(async (req, res) => {
     }
 
     // 🔐 Verify Firebase token
-    const decodedToken = await authApp
+    const decodedToken = await firebaseAuth.authApp
         .auth()
         .verifyIdToken(idToken);
 
@@ -5066,7 +5044,7 @@ exports.appleLogin = catchAsync(async (req, res) => {
 
 exports.facebookLogin = catchAsync(async (req, res) => {
     const { idToken, deviceToken } = req.body;
-    console.log(idToken, deviceToken)
+    console.log("Social login received");
     if (!idToken) {
         return res.status(400).json({
             status: 0,
@@ -5075,7 +5053,7 @@ exports.facebookLogin = catchAsync(async (req, res) => {
     }
 
     // 🔐 Verify Firebase token
-    const decodedToken = await authApp.auth().verifyIdToken(idToken);
+    const decodedToken = await firebaseAuth.authApp.auth().verifyIdToken(idToken);
 
     const {
         email,

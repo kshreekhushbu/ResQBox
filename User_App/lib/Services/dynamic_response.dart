@@ -26,7 +26,7 @@ class ApiService {
     } else {
       token = prefs.getString('ApiToken');
     }
-    debugPrint('TOKEN************* $token');
+    debugPrint('TOKEN present: ${token != null && token.isNotEmpty}');
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -256,7 +256,7 @@ class ApiService {
   //     } else {
   //       token = pref.getString('ApiToken');
   //     }
-  //     debugPrint('TOKEN************* $token');
+  //     debugPrint('TOKEN present: ${token != null && token.isNotEmpty}');
   //     var request = http.MultipartRequest('POST', Uri.parse(url));
 
   //     // Add Authorization header

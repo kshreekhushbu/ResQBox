@@ -9,14 +9,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY_VENDORS);
 
 exports.startStripeOAuth = async (req, res) => {
   try {
-    const { kitchenId } = req.params;
+    const kitchenId = req.kitchen?.kitchenId || Number(req.params.kitchenId);
 
-    // logger.info(`[Stripe OAuth] Starting OAuth for kitchen: ${kitchenId}`);
-    console.log(`[Stripe OAuth] Starting OAuth for kitchen: ${kitchenId}`);
-    // ✅ Check kitchen exists
-    const kitchen = await prisma.kitchen.findUnique({
-      where: { kitchenId: Number(kitchenId) }
-    });
+    if (!req.kitchen || Number(req.kitchen.kitchenId) !== Number(kitchenId)) {
+      return res.status(403).json({
+        status: 0,
+        message: "You can only connect Stripe for your own kitchen"
+      });
+    }
+
+    if (req.isTeamMember) {
+      return res.status(403).json({
+        status: 0,
+        message: "This action is limited to the kitchen owner"
+      });
+    }
+
+    const kitchen = req.kitchen;
 
     if (!kitchen) {
       return res.status(404).json({

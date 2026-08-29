@@ -28,7 +28,7 @@ export const sendOTP = async (
 
 export const verifyOTP = async (
   credentials: VerifyPayload,
-): Promise<{ status: number; message: string; email: string }> => {
+): Promise<{ status: number; message: string; email: string; resetToken?: string }> => {
   const res = await ApiService.post("/verifyForgotPasswordOTP", credentials);
   return res?.data;
 };
@@ -37,5 +37,13 @@ export const ResetPassword = async (
   credentials: ResetPayload,
 ): Promise<{ Message: string }> => {
   const res = await ApiService.post("/resetPassword", credentials);
+  return res?.data;
+};
+
+export const changePassword = async (credentials: {
+  oldPassword: string;
+  newPassword: string;
+}): Promise<{ status: number; message: string }> => {
+  const res = await ApiService.post("/resetOldPassword", credentials);
   return res?.data;
 };
