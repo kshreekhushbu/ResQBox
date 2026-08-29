@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ResQBox Security Findings — Short Report</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 800px; margin: 40px auto; padding: 0 24px; color: #111; line-height: 1.45; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 16px; margin-top: 28px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    code { font-size: 12px; }
+    .meta { color: #555; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>ResQBox Security Findings — Short Report</h1>
+  <p class="meta">
+    Date: 29 August 2026<br />
+    Scope: Backend, Admin Portal, User App, Vendor App<br />
+    Method: Static code review (not a live penetration test)
+  </p>
+
+  <h2>Summary</h2>
+  <p>The main risk is <strong>weak authentication and access control</strong>. Several admin, payment, upload, and realtime paths skip auth or trust the client.</p>
+
+  <h2>Critical / High</h2>
+  <table>
+    <tr><th>#</th><th>Finding</th><th>Where</th></tr>
+    <tr><td>1</td><td>Anyone can create an admin account</td><td><code>POST /api/admin/adminSignUp</code></td></tr>
+    <tr><td>2</td><td>Password can be reset with only an email (OTP is not required at reset)</td><td>Admin and vendor <code>resetPassword</code></td></tr>
+    <tr><td>3</td><td>Android signing passwords and a vendor keystore are in the repo</td><td><code>key.properties</code>, <code>*.jks</code></td></tr>
+    <tr><td>4</td><td>Stripe kitchen linking and OAuth start are unauthenticated</td><td>Admin Stripe route; <code>GET /api/stripe/oauth/start/:kitchenId</code></td></tr>
+    <tr><td>5</td><td>File uploads to S3 do not require login</td><td>User, vendor, and admin <code>/upload</code></td></tr>
+    <tr><td>6</td><td>Socket.IO rooms join from query params with no JWT</td><td>Backend socket + all clients</td></tr>
+    <tr><td>7</td><td>Admin permissions are UI-only; any logged-in admin can call sensitive APIs</td><td>Admin portal + backend routes</td></tr>
+    <tr><td>8</td><td>Team members receive a full kitchen-owner JWT</td><td>Vendor login</td></tr>
+    <tr><td>9</td><td>Order payment can be captured before kitchen ownership is checked</td><td><code>acceptOrder</code></td></tr>
+    <tr><td>10</td><td>JWTs and login passwords are logged; tokens stored in plaintext</td><td>Logs, localStorage, SharedPreferences</td></tr>
+  </table>
+
+  <h2>Also notable</h2>
+  <ul>
+    <li>CORS allows all origins (*)</li>
+    <li>User App allows cleartext HTTP</li>
+    <li>OTPs have no real expiry; a test email uses a fixed OTP</li>
+    <li>Vendor release builds point at the dev API; User App uses a Stripe test key against production</li>
+  </ul>
+
+  <h2>What looks solid</h2>
+  <ul>
+    <li>Database access uses Prisma (low SQL-injection risk)</li>
+    <li>No command-execution / eval patterns in app code</li>
+    <li>.env is gitignored; Helmet and a global rate limit exist</li>
+  </ul>
+
+  <h2>Fix first</h2>
+  <ol>
+    <li>Close public admin signup and unauthenticated Stripe/upload routes</li>
+    <li>Require a verified OTP token for password reset</li>
+    <li>Authenticate Socket.IO; check order ownership before payment capture</li>
+    <li>Enforce admin and team-member roles on the server</li>
+    <li>Remove secrets from git, rotate signing keys, stop logging tokens</li>
+  </ol>
+
+  <p>This is a code security assessment, not a pentest of production. Rotate any credentials that have been in this repository.</p>
+</body>
+</html>
